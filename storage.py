@@ -49,7 +49,7 @@ class DatabaseManager:
             finally:
                 conn.close()
         return None
-    
+
     def initialize_tables(self):
         """Create tables if they don't exist."""
         conn = self.get_connection()
