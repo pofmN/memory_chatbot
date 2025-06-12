@@ -4,16 +4,17 @@ from storage import DatabaseManager
 
 
 db = DatabaseManager()
-# First, let's create a proper retrieval tool function
-def retrieval_tool(query: str) -> str:
-    """Tool that retrieves chat history from database"""
-    if hasattr(st.session_state, 'current_session'):
-        history = db.get_chat_history(st.session_state.current_session)
-        
-        # Format history in a readable way
-        formatted_history = "Previous conversation history:\n\n"
-        for msg in history[-5:]:  # Get the last 5 messages
-            formatted_history += f"{msg['role'].capitalize()}: {msg['content']}\n"
-        
-        return formatted_history
+
+def retrieval_tool(session_id: str) -> str:
+    if session_id:
+        history = db.get_session_summary(session_id)
+        formatted_history = ''
+        if history:
+            for msg in history[-5:]:  # Get last 5 messages
+                summary = msg.get('summary', '')
+                formatted_history += f"Summary: {summary}\n\n"
+            return formatted_history
+        else:
+            return f"No chat history found for session {session_id}."
+    
     return "No chat history available."

@@ -46,7 +46,7 @@ graph_builder.add_edge("tools", "chatbot")
 graph = graph_builder.compile()
 
 def stream_graph_update(user_input: str):
-    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
+    for event in graph.stream({"mșssages": [{"role": "user", "content": user_input}]}):
         for key, value in event.items():
             # Only print messages from the chatbot node, not from tools
             if key == "chatbot" and "messages" in value and len(value["messages"]) > 0:

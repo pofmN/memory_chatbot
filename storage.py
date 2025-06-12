@@ -2,9 +2,11 @@ print('hello from storage.py')
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
-from typing import Dict, List
+from typing import Dict, List, Any
 import uuid
 import google.generativeai as genai
+import json
+from datetime import datetime, timedelta
 
 class DatabaseManager:
     def __init__(self): 
@@ -181,11 +183,11 @@ class DatabaseManager:
         
         # Format the chat history as a string
         formatted_history = []
-        for message in history:
-            role = message.get('role', 'user')
-            content = message.get('content', '')
-            formatted_history.append(f"{role.capitalize()}: {content}")
-        history_text = "\n".join(formatted_history)
+        # for message in history:
+        #     role = message.get('role', 'user')
+        #     content = message.get('content', '')
+        #     formatted_history.append(f"{role.capitalize()}: {content}")
+        history_text = "\n".join(history)
 
         # Create a prompt for summarization
         prompt = (
