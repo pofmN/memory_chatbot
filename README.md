@@ -17,8 +17,8 @@ Memory Chat combines Google's Gemini API for natural language processing with Po
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Python 3.8+
-- **AI:** Google Gemini 2.0 Flash
+- **Backend:** Python 3.13+
+- **AI:** Google Gemini 2.0 Flash, GPT4.1-mini
 - **Database:** PostgreSQL 15
 - **UI:** Streamlit
 - **Containers:** Docker & Docker Compose

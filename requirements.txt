@@ -1,0 +1,12 @@
+streamlit
+fastmcp
+tavily-python
+psycopg2-binary
+python-dotenv
+pydantic
+langchain
+langchain-google-genai
+langgraph
+asyncio
+aiohttp
+requests

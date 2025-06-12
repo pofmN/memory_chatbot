@@ -1,4 +1,4 @@
-version: '3.13'
+version: '3.8'
 
 services:
   postgres:
@@ -14,6 +14,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot_user -d chatbot_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
 
   pgadmin:
     image: dpage/pgadmin4
@@ -24,9 +31,45 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - chatbot_network
+
+  chatbot-app:
+    build: .
+    container_name: chatbot_app
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=chatbot_db
+      - DB_USER=chatbot_user
+      - DB_PASSWORD=chatbot_password
+      # Add your API keys here or use env_file
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+      - /app/venv
+      - /app/__pycache__
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - chatbot_network
 
 volumes:
   postgres_data:
+  pgadmin_data:
+
+networks:
+  chatbot_network:
+    driver: bridge
