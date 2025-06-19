@@ -1,6 +1,6 @@
 import google.generativeai as genai
 import os
-from storage import DatabaseManager
+from database.storage import DatabaseManager
 
 class GeminiChatbot:
     def __init__(self):
@@ -43,4 +43,3 @@ Hãy trả lời một cách chính xác, có chú ý đến lịch sử trò ch
     def get_welcome_message(self) -> str:
         """Get welcome message for new chat"""
         return "Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp bạn hôm nay?"
-    

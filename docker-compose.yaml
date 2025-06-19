@@ -12,13 +12,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U chatbot_user -d chatbot_db"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
     networks:
       - chatbot_network
 
@@ -52,6 +53,10 @@ services:
       # Add your API keys here or use env_file
       - TAVILY_API_KEY=${TAVILY_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-memory_chatbot}
     ports:
       - "8501:8501"
     volumes:

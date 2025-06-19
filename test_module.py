@@ -1,39 +1,111 @@
-from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.output_parsers import StrOutputParser
-import dotenv
-from dotenv import load_dotenv
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langgraph.types import Command
+from langgraph.prebuilt import create_react_agent
+from langgraph.graph import StateGraph, START, END, MessagesState
+from pydantic import BaseModel, Field
+from typing import List, Annotated, Literal, Optional
+from langchain.chat_models import init_chat_model
 import os
-import getpass
+import json
+from dotenv import load_dotenv
+from database.storage import DatabaseManager
+from prompt import _extract_user_information_promt
+
 
 load_dotenv()
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Debug: Print if we found the key
-if os.environ.get("GOOGLE_API_KEY"):
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    print(f"Google API key loaded successfully (starts with {api_key[:5]}...)")
-else:
-    print("No API key found in environment variables. Prompting for input...")
-    api_key = getpass.getpass("Enter your Google AI API key: ")
-    os.environ["GOOGLE_API_KEY"] = api_key
-    print("API key set manually.")
+system_prompt = _extract_user_information_promt
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
+llms = init_chat_model(
+    "google_genai:gemini-2.0-flash",
     temperature=0.2,
-    max_output_tokens=None,
+    max_tokens=1000,
+    api_key=GOOGLE_API_KEY
 )
 
-prompt = PromptTemplate.from_template(
-    """Your are helpful assistant. Answer the question based on the context provided.
-Question: {question}"""
-)
+db = DatabaseManager()
 
-answer_chain = prompt | llm | StrOutputParser()
+class UserInformation(BaseModel):
+    user_name: Annotated[str, Field(description="Full name of the user")]
+    phone_number: Annotated[Optional[str], Field(description="User's phone number")]
+    year_of_birth: Annotated[Optional[int], Field(description="User's year of birth")]
+    address: Annotated[Optional[str], Field(description="User's address (city, province, or full address)")]
+    major: Annotated[Optional[str], Field(description="User's field of study or academic major")]
+    additional_info: Annotated[Optional[str], Field(description="Any other relevant details about the user")]
 
-answer = answer_chain.invoke(
-    {"question": "What is the capital of France?",}
-    )
+def extract_user_information(
+    user_input: str
+) -> Annotated[dict, Field(description="Extracted user information in JSON format")]:
+    """
+    Extract user information from the input string.
+    
+    Args:
+        user_input (str): The input string containing user information.
+        
+    Returns:
+        dict: Extracted user information as a dictionaryß
+    """
+    prompt = f"""{system_prompt}
+    Here is the user input: {user_input}
+    """
+    response = llms.with_structured_output(UserInformation).invoke(prompt) # Example output for testing purposes
+    try: 
+        response_text = response.model_dump()
+        return response_text
+    except json.JSONDecodeError as e:
+        print(f"JSON decoding error: {e}")
+        return {
+            "error": str(e),
+            "response": response_text
+        }
 
-print(answer)  # Should print "Paris" or similar response based on the model's output.
+def validate_user_information(
+    user_info: dict
+) -> bool:
+    """
+    Validate the extracted user information.
+    
+    Args:
+        user_info (dict): The extracted user information.
+        
+    Returns:
+        bool: True if the information is valid, False otherwise.
+    """
+    if not user_info.get("user_name"):
+        return False
+    if user_info.get("phone_number") and not user_info["phone_number"].isdigit():
+        return False
+    if user_info.get("year_of_birth"):
+        try:
+            year = int(user_info["year_of_birth"])
+            if year < 1900 or year > 2019:
+                return False
+        except ValueError:
+            return False
+    return True
+
+def save_user_information(
+    user_input: str
+) -> None:
+    """
+    Save the extracted user information to a database or file.
+    
+    Args:
+        user_info (dict): The extracted user information.
+    """
+    user_info = extract_user_information(user_input)
+    if validate_user_information(user_info):
+        db.add_user_info(user_info)
+    else:
+        print("Invalid user information:", user_info)
+    print("User information saved:", json.dumps(user_info, indent=2, ensure_ascii=False))
+
+
+
+user_input_example = "Nguyễn Văn A, sinh năm 2001, học IT tại Đại học Bách Khoa, số điện thoại 0123456789, sống tại Hà Nội."
+result = extract_user_information(user_input_example)
+#print(result)
+print(json.dumps(result, indent=2, ensure_ascii=False))
+print("User name: "+result.get("user_name"))

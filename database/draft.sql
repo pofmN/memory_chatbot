@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     content TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES chat_sessions(session_id) ON DELETE CASCADE
-);
+);  
 
 CREATE TABLE IF NOT EXISTS chat_summaries (
     id SERIAL PRIMARY KEY,

@@ -4,21 +4,18 @@ from fastmcp import FastMCP
 from tavily import TavilyClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
-# Add parent directory to path to import storage
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from storage import DatabaseManager
-from storage import DatabaseManager
+from database.storage import DatabaseManager
+from database.storage import DatabaseManager
 from typing import Optional, List
 import json
 
-# Load environment variables
 load_dotenv()
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 if not TAVILY_API_KEY:
     raise ValueError("TAVILY_API_KEY not found in .env file")
 
-# Initialize Tavily client
 db = DatabaseManager()
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
@@ -35,7 +32,6 @@ class SearchResponse(BaseModel):
     timestamp: str
 
 
-# Initialize FastMCP
 mcp = FastMCP("Web Search, Retrieve Server")
 
 @mcp.tool()
@@ -43,7 +39,7 @@ async def search_web(query: str, max_results: int = 5, search_depth: str = "basi
     try:
         response = tavily_client.search(
             query=query,
-            max_results=max_results, 
+            max_results=max_results,
             search_depth=search_depth
         )
         results = [
@@ -86,6 +82,19 @@ async def get_history_summary(session_id: str) -> str:
     return f"Summary for session {summary}"
 
 @mcp.tool()
+async def get_user_profile(user_name: str) -> str:
+    """
+    Retrieve the user profile information by user name.
+    """
+    user_profile = db.get_user_by_name(user_name)
+    if not user_profile:
+        return f"No profile found for user {user_name}."
+    
+    # Convert the user profile to a JSON string
+    profile_json = json.dumps(user_profile, indent=2, ensure_ascii=False)
+    return f"User Profile for {user_name}:\n{profile_json}"
+
+@mcp.tool()
 async def test_mcp_server() -> str:
     """
     A simple test tool to check if the MCP server is running.
@@ -93,5 +102,4 @@ async def test_mcp_server() -> str:
     return "MCP server is running successfully!"
 
 if __name__ == "__main__":
-    # uvicorn.run(mcp.app, host="0.0.0.0", port=8000)
     mcp.run(transport="stdio")

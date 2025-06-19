@@ -1,6 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
-from storage import DatabaseManager
+from database.storage import DatabaseManager
 
 
 db = DatabaseManager()

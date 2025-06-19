@@ -1,7 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 from database.storage import DatabaseManager
-from langgraph.graph import StateGraph, START
+from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_tavily import TavilySearch
@@ -59,30 +59,6 @@ class MCPClient():
             command="python",
             args=[server_path]
         )
-
-    # async def search_web(self, query: str, max_results: int = 3, search_depth: str = "basic") -> dict:
-    #     """
-    #     Send a search query to the MCP server and return the response.
-    #     """
-    #     try:
-    #         async with stdio_client(self.server_params) as (read, write):
-    #             async with ClientSession(read, write) as session:
-    #                 await session.initialize()
-    #                 result = await session.call_tool(
-    #                     "search_web",
-    #                     arguments={
-    #                         "query": query,
-    #                         "max_results": max_results,
-    #                         "search_depth": search_depth
-    #                     }
-    #                 )
-    #                 if hasattr(result, 'content') and result.content:
-    #                     content = result.content[0] if isinstance(result.content, list) else result.content
-    #                     return json.loads(content.text) if hasattr(content, 'text') else content
-    #                 else:
-    #                     return {"status": "error", "results": [], "timestamp": "No content in response"}
-    #     except Exception as e:
-    #         return {"status": "error", "results": [], "timestamp": str(e)}
         
     async def get_history_summary(self, session_id: str) -> str:
         """
@@ -117,27 +93,6 @@ class MCPClient():
         
 MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp_server/mcp_server.py"
 mcp_client = MCPClient(MCP_SERVER_PATH)
-
-# async def async_mcp_search(query: str, max_results: int = 3):
-#     """
-#     Search the web using the MCP server.
-#     """
-#     response = mcp_client.search_web(query, max_results)
-#     if response.get("status") == "success":
-#             formatted_results = []
-#             for item in response.get("results", []):
-#                 formatted_results.append(
-#                     {
-#                         "title": item.get("title", "No title"),
-#                         "url": item.get("url", "No URL"),
-#                         "content": item.get("content", "No content"),
-#                         "score": item.get("score", 0.0)
-#                     }
-#                 )
-#             response = "/n".join(formatted_results)
-#     else:
-#         response = "Error while searching the web."
-#     return response
 
 
 # async def async_mcp_history(session_id: str):
@@ -232,6 +187,16 @@ retrieve_tool = StructuredTool.from_function(
 tools =[search_tool, retrieve_tool]
 llm_with_tools = llm.bind_tools(tools)
 
+def routine_condition(state: State) -> bool:
+    last_message = state['messages'][-1] if message else None
+    if hasattr(response, 'tool_calls') and response.tool_calls:
+        tools_called = response.tool_Calls
+        if tools_called == "retrieve_chat_history":
+            return "retrieve_chat_history"
+        elif tools_called == "search_online":
+            return "search_online"
+    return "__end__"
+
 def chatbot(state: State) -> str:
     response = llm_with_tools.invoke(state["messages"])
     if hasattr(response, 'tool_calls') and response.tool_calls:
@@ -247,16 +212,24 @@ def review_response(state: State) -> str:
     
     return response
 
-tool_node = ToolNode(tools=[search_tool, retrieve_tool])
+# tool_node = ToolNode(tools=[search_tool, retrieve_tool])
 
-graph_builder.add_node("tools", tool_node)
+graph_builder.add_node("search_online", ToolNode(tools=tools[0]))
+graph_builder.add_node("retrieve_chat_history", ToolNode(tools=tools[1]))
 graph_builder.add_node("chatbot", chatbot)
 
 graph_builder.add_edge(START, "chatbot")
 
-graph_builder.add_conditional_edges("chatbot", tools_condition)
+graph_builder.add_conditional_edges("chatbot", 
+                routine_condition,
+                {
+                    "search_online": "search_online",
+                    "retrieve_chat_history": "retrieve_chat_history",
+                    "__end__": END
+                })
 
-graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_edge("search_online", "chatbot")
+graph_builder.add_edge("retrieve_chat_history", "chatbot")
 graph = graph_builder.compile()
 
 # Chat input
