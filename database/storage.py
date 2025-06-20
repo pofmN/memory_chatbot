@@ -29,109 +29,94 @@ class DatabaseManager:
             return None
 
     # ============================================================================
-    # USER MANAGEMENT
+    # SINGLE USER PROFILE MANAGEMENT
     # ============================================================================
     
-    def add_user_info(self, user_data: dict) -> Optional[int]:
-        """Create a new user with profile information"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO user_profile (user_name, phone_number, year_of_birth, address, major, additional_info)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        RETURNING user_id
-                    """, (
-                        user_data.get('user_name'),
-                        user_data.get('phone_number'),
-                        user_data.get('year_of_birth'),
-                        user_data.get('address'),
-                        user_data.get('major'),
-                        user_data.get('additional_info')
-                    ))
-                    user_id = cur.fetchone()[0]
-                    conn.commit()
-                    return user_id
-            except psycopg2.Error as e:
-                print(f"Error creating user: {e}")
-                conn.rollback()
-                return None
-            finally:
-                conn.close()
-        return None
-
-    def get_user_by_id(self, user_id: int) -> Optional[dict]:
-        """Get user by ID"""
+    def get_user_profile(self) -> Optional[dict]:
+        """Get the single user profile"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT * FROM user_profile WHERE user_id = %s
-                    """, (user_id,))
-                    return dict(cur.fetchone()) if cur.fetchone() else None
-            except psycopg2.Error as e:
-                print(f"Error retrieving user: {e}")
-                return None
-            finally:
-                conn.close()
-        return None
-
-    def get_user_by_name(self, user_name: str) -> Optional[dict]:
-        """Get user by name"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT * FROM user_profile WHERE user_name ILIKE %s
-                    """, (f"%{user_name}%",))
+                    cur.execute("SELECT * FROM user_profile ORDER BY id LIMIT 1")
                     result = cur.fetchone()
                     return dict(result) if result else None
             except psycopg2.Error as e:
-                print(f"Error retrieving user by name: {e}")
+                print(f"Error retrieving user profile: {e}")
                 return None
             finally:
                 conn.close()
         return None
 
-    # def update_user(self, user_id: int, user_data: dict) -> bool:
-    #     """Update user information"""
-    #     conn = self.get_connection()
-    #     if conn:
-    #         try:
-    #             with conn.cursor() as cur:
-    #                 cur.execute("""
-    #                     UPDATE user_profile 
-    #                     SET user_name = %s, phone_number = %s, year_of_birth = %s, 
-    #                         address = %s, major = %s, additional_info = %s
-    #                     WHERE user_id = %s
-    #                 """, (
-    #                     user_data.get('user_name'),
-    #                     user_data.get('phone_number'),
-    #                     user_data.get('year_of_birth'),
-    #                     user_data.get('address'),
-    #                     user_data.get('major'),
-    #                     user_data.get('additional_info'),
-    #                     user_id
-    #                 ))
-    #                 conn.commit()
-    #                 return cur.rowcount > 0
-    #         except psycopg2.Error as e:
-    #             print(f"Error updating user: {e}")
-    #             conn.rollback()
-    #             return False
-    #         finally:
-    #             conn.close()
-    #     return False
+    def update_user_profile(self, profile_data: dict) -> bool:
+        """Update user profile, keeping existing values for fields not provided"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    # Get existing profile
+                    cur.execute("SELECT * FROM user_profile LIMIT 1")
+                    existing = cur.fetchone()
+                    
+                    if existing:
+                        # ✅ Merge new data with existing data
+                        updated_data = {
+                            'user_name': profile_data.get('user_name') or existing.get('user_name'),
+                            'phone_number': profile_data.get('phone_number') or existing.get('phone_number'),
+                            'year_of_birth': profile_data.get('year_of_birth') or existing.get('year_of_birth'),
+                            'address': profile_data.get('address') or existing.get('address'),
+                            'major': profile_data.get('major') or existing.get('major'),
+                            'additional_info': profile_data.get('additional_info') or existing.get('additional_info')
+                        }
+                        
+                        # Update with merged data
+                        cur.execute("""
+                            UPDATE user_profile 
+                            SET user_name = %s, phone_number = %s, year_of_birth = %s, 
+                                address = %s, major = %s, additional_info = %s, 
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                        """, (
+                            updated_data['user_name'],
+                            updated_data['phone_number'],
+                            updated_data['year_of_birth'],
+                            updated_data['address'],
+                            updated_data['major'],
+                            updated_data['additional_info'],
+                            existing['id']
+                        ))
+                        print(f"✅ Updated profile: {updated_data}")
+                    else:
+                        # Create new profile if none exists
+                        cur.execute("""
+                            INSERT INTO user_profile (user_name, phone_number, year_of_birth, address, major, additional_info)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, (
+                            profile_data.get('user_name', 'User'),  # Default name if not provided
+                            profile_data.get('phone_number'),
+                            profile_data.get('year_of_birth'),
+                            profile_data.get('address'),
+                            profile_data.get('major'),
+                            profile_data.get('additional_info')
+                        ))
+                        print("✅ Created new profile")
+                
+                conn.commit()
+                return True
+            except psycopg2.Error as e:
+                print(f"Error updating user profile: {e}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
+        return False
 
     # ============================================================================
     # SESSION MANAGEMENT
     # ============================================================================
     
-    def create_session(self, user_id: int, session_id: str = None) -> Optional[str]:
-        """Create a new chat session for a user"""
+    def create_session(self, session_id: str = None) -> Optional[str]:
+        """Create a new chat session"""
         if session_id is None:
             session_id = str(uuid.uuid4())
         
@@ -140,11 +125,11 @@ class DatabaseManager:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO chat_sessions (session_id, user_id, status) 
-                        VALUES (%s, %s, 'active') 
+                        INSERT INTO chat_sessions (session_id, status) 
+                        VALUES (%s, 'active') 
                         ON CONFLICT (session_id) DO NOTHING
                         RETURNING session_id
-                    """, (session_id, user_id))
+                    """, (session_id,))
                     result = cur.fetchone()
                     conn.commit()
                     return result[0] if result else session_id
@@ -156,105 +141,8 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def get_session(self, session_id: str) -> Optional[dict]:
-        """Get session information"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT cs.*, up.user_name 
-                        FROM chat_sessions cs
-                        JOIN user_profile up ON cs.user_id = up.user_id
-                        WHERE cs.session_id = %s
-                    """, (session_id,))
-                    result = cur.fetchone()
-                    return dict(result) if result else None
-            except psycopg2.Error as e:
-                print(f"Error retrieving session: {e}")
-                return None
-            finally:
-                conn.close()
-        return None
-
-    def end_session(self, session_id: str) -> bool:
-        """End a chat session"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE chat_sessions 
-                        SET status = 'ended', end_time = CURRENT_TIMESTAMP, last_updated = CURRENT_TIMESTAMP
-                        WHERE session_id = %s
-                    """, (session_id,))
-                    conn.commit()
-                    return cur.rowcount > 0
-            except psycopg2.Error as e:
-                print(f"Error ending session: {e}")
-                conn.rollback()
-                return False
-            finally:
-                conn.close()
-        return False
-
-    # ============================================================================
-    # MESSAGE MANAGEMENT
-    # ============================================================================
-
-    def save_message(self, session_id: str, user_id: int, role: str, content: str, looker_user: str = None) -> bool:
-        """Save a message to chat_messages"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor() as cur:
-                    # Save message
-                    cur.execute("""
-                        INSERT INTO chat_messages (session_id, user_id, content, looker_user) 
-                        VALUES (%s, %s, %s, %s)
-                    """, (session_id, user_id, content, looker_user or role))
-
-                    # Update session last_updated
-                    cur.execute("""
-                        UPDATE chat_sessions 
-                        SET last_updated = CURRENT_TIMESTAMP 
-                        WHERE session_id = %s
-                    """, (session_id,))
-
-                    conn.commit()
-                    return True
-            except psycopg2.Error as e:
-                print(f"Error saving message: {e}")
-                conn.rollback()
-                return False
-            finally:
-                conn.close()
-        return False
-
-    def get_chat_history(self, session_id: str, limit: int = 50) -> List[dict]:
-        """Retrieve chat history for a session"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT cm.*, up.user_name
-                        FROM chat_messages cm
-                        JOIN user_profile up ON cm.user_id = up.user_id
-                        WHERE cm.session_id = %s 
-                        ORDER BY cm.created_at ASC
-                        LIMIT %s
-                    """, (session_id, limit))
-                    return [dict(row) for row in cur.fetchall()]
-            except psycopg2.Error as e:
-                print(f"Error retrieving chat history: {e}")
-                return []
-            finally:
-                conn.close()
-        return []
-
-    def get_user_sessions(self, user_id: int, limit: int = 20) -> List[dict]:
-        """Get all sessions for a user"""
+    def get_all_sessions(self) -> List[dict]:
+        """Get all chat sessions"""
         conn = self.get_connection()
         if conn:
             try:
@@ -263,33 +151,8 @@ class DatabaseManager:
                         SELECT cs.*, COUNT(cm.message_id) as message_count
                         FROM chat_sessions cs
                         LEFT JOIN chat_messages cm ON cs.session_id = cm.session_id
-                        WHERE cs.user_id = %s
-                        GROUP BY cs.session_id, cs.user_id, cs.start_time, cs.end_time, 
+                        GROUP BY cs.session_id, cs.start_time, cs.end_time, 
                                  cs.status, cs.context_data, cs.created_at, cs.last_updated
-                        ORDER BY cs.last_updated DESC
-                        LIMIT %s
-                    """, (user_id, limit))
-                    return [dict(row) for row in cur.fetchall()]
-            except psycopg2.Error as e:
-                print(f"Error retrieving user sessions: {e}")
-                return []
-            finally:
-                conn.close()
-        return []
-
-    def get_all_sessions(self) -> List[dict]:
-        """Get all chat sessions with user info"""
-        conn = self.get_connection()
-        if conn:
-            try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT cs.*, up.user_name, COUNT(cm.message_id) as message_count
-                        FROM chat_sessions cs
-                        JOIN user_profile up ON cs.user_id = up.user_id
-                        LEFT JOIN chat_messages cm ON cs.session_id = cm.session_id
-                        GROUP BY cs.session_id, cs.user_id, cs.start_time, cs.end_time, 
-                                 cs.status, cs.context_data, cs.created_at, cs.last_updated, up.user_name
                         ORDER BY cs.last_updated DESC
                     """)
                     return [dict(row) for row in cur.fetchall()]
@@ -301,30 +164,154 @@ class DatabaseManager:
         return []
 
     # ============================================================================
-    # SUMMARY MANAGEMENT
+    # MESSAGE MANAGEMENT WITH AUTO-SUMMARIZATION
     # ============================================================================
 
-    def save_session_summary(self, session_id: str, summary: str) -> bool:
-        """Save or update session summary"""
+    def save_message(self, session_id: str, role: str, content: str) -> bool:
+        """Save a message and auto-summarize when needed"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor() as cur:
+                    # Save message to chat_messages
+                    cur.execute("""
+                        INSERT INTO chat_messages (session_id, content, role) 
+                        VALUES (%s, %s, %s)
+                    """, (session_id, content, role))
+
+                    # Update session last_updated
+                    cur.execute("""
+                        UPDATE chat_sessions 
+                        SET last_updated = CURRENT_TIMESTAMP 
+                        WHERE session_id = %s
+                    """, (session_id,))
+
+                    # Save to chat_summaries for auto-summarization
                     cur.execute("""
                         INSERT INTO chat_summaries (session_id, summarize, last_update)
                         VALUES (%s, %s, CURRENT_TIMESTAMP)
-                        ON CONFLICT (session_id) 
-                        DO UPDATE SET summarize = EXCLUDED.summarize, last_update = CURRENT_TIMESTAMP
-                    """, (session_id, summary))
+                    """, (session_id, content))
+
+                    # Check summary count for auto-summarization
+                    cur.execute("""
+                        SELECT COUNT(*) FROM chat_summaries WHERE session_id = %s
+                    """, (session_id,))
+                    
+                    summary_count = cur.fetchone()[0]
                     conn.commit()
+                    
+                    # Auto-summarize every 5 messages
+                    if summary_count >= 5:
+                        print(f"📊 Session {session_id} has reached {summary_count} messages - Auto-summarizing...")
+                        self.summarize_session(session_id)
+                    
                     return True
+                    
             except psycopg2.Error as e:
-                print(f"Error saving summary: {e}")
+                print(f"Error saving message: {e}")
                 conn.rollback()
                 return False
             finally:
                 conn.close()
         return False
+
+    def get_chat_history(self, session_id: str) -> List[dict]:
+        """Retrieve chat history for a session"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        SELECT * FROM chat_messages
+                        WHERE session_id = %s 
+                    """, (session_id))
+                    return [dict(row) for row in cur.fetchall()]
+            except psycopg2.Error as e:
+                print(f"Error retrieving chat history: {e}")
+                return []
+            finally:
+                conn.close()
+        return []
+
+    # ============================================================================
+    # ENHANCED SUMMARY MANAGEMENT
+    # ============================================================================
+
+    def summarize_session(self, session_id: str) -> Optional[str]:
+        """Summarize multiple chat summaries into one comprehensive summary"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    # Get all individual summaries for this session
+                    cur.execute("""
+                        SELECT summarize, last_update FROM chat_summaries 
+                        WHERE session_id = %s 
+                        ORDER BY last_update ASC
+                    """, (session_id,))
+                    summaries = cur.fetchall()
+                    
+                    if len(summaries) < 5:
+                        print(f"Not enough summaries to compress for session {session_id}")
+                        return None
+                    
+                    # Prepare all individual messages for summarization
+                    individual_messages = []
+                    for summary, timestamp in summaries:
+                        individual_messages.append(f"[{timestamp}] {summary}")
+                    
+                    combined_text = "\n".join(individual_messages)
+                    
+                    # Create comprehensive summary prompt
+                    prompt = f"""Please create a comprehensive summary of this chat conversation.
+
+Individual messages from the conversation:
+{combined_text}
+
+Instructions:
+1. Summarize the key points, topics discussed, and important information
+2. Focus on user preferences, personal details, and significant conversation topics
+3. Maintain chronological flow of the conversation
+4. Keep the summary concise but informative (2-3 paragraphs max)
+5. Include any important context that would help in future conversations
+
+Comprehensive Summary:"""
+
+                    try:
+                        # Generate summary using Gemini
+                        response = self.model.generate_content(prompt)
+                        comprehensive_summary = response.text.strip()
+                        
+                        # Clear old individual summaries and replace with comprehensive one
+                        cur.execute("""
+                            DELETE FROM chat_summaries WHERE session_id = %s
+                        """, (session_id,))
+                        
+                        # Insert the new comprehensive summary
+                        cur.execute("""
+                            INSERT INTO chat_summaries (session_id, summarize, last_update)
+                            VALUES (%s, %s, CURRENT_TIMESTAMP)
+                        """, (session_id, comprehensive_summary))
+                        
+                        conn.commit()
+                        
+                        print(f"✅ Successfully created comprehensive summary for session {session_id}")
+                        print(f"📝 Summary: {comprehensive_summary[:150]}...")
+                        
+                        return comprehensive_summary
+                        
+                    except Exception as e:
+                        print(f"Error generating summary with Gemini: {e}")
+                        conn.rollback()
+                        return None
+                        
+            except psycopg2.Error as e:
+                print(f"Error summarizing session: {e}")
+                conn.rollback()
+                return None
+            finally:
+                conn.close()
+        return None
 
     def get_session_summary(self, session_id: str) -> Optional[dict]:
         """Get the summary of a chat session"""
@@ -333,7 +320,8 @@ class DatabaseManager:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
-                        SELECT * FROM chat_summaries WHERE session_id = %s
+                        SELECT * FROM chat_summaries 
+                        WHERE session_id = %s
                     """, (session_id,))
                     result = cur.fetchone()
                     return dict(result) if result else None
@@ -344,56 +332,27 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def summarize_chat_history(self, session_id: str) -> str:
-        """Create summary of chat session"""
-        messages = self.get_chat_history(session_id)
-        if not messages:
-            return ""
+    def force_summarize_session(self, session_id: str) -> Optional[str]:
+        """Force summarization regardless of message count"""
+        print(f"🔄 Force summarizing session {session_id}")
+        return self.summarize_session(session_id)
 
-        # Format messages for summarization
-        formatted_messages = []
-        for msg in messages:
-            role = msg.get('looker_user', 'user')
-            content = msg.get('content', '')
-            formatted_messages.append(f"{role}: {content}")
-
-        history_text = "\n".join(formatted_messages)
-
-        # Create summary prompt
-        prompt = (
-            "Summarize the following conversation between a user and an AI assistant. "
-            "Focus on what the user said, provided personal information, and important details:\n\n"
-            f"{history_text}\n\nSummary:"
-        )
-
-        try:
-            response = self.model.generate_content(prompt)
-            summary = response.text.strip()
-            
-            # Save the summary
-            self.save_session_summary(session_id, summary)
-            
-            return summary
-        except Exception as e:
-            print(f"Error summarizing chat history: {e}")
-            return ""
 
     # ============================================================================
-    # ACTIVITY MANAGEMENT
+    # ACTIVITIES MANAGEMENT (SIMPLIFIED)
     # ============================================================================
 
-    def create_activity(self, user_id: int, activity_data: dict) -> Optional[int]:
+    def create_activity(self, activity_data: dict) -> Optional[int]:
         """Create a new activity"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO activities (user_id, name, description, start_at, end_at, tags)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO activities (name, description, start_at, end_at, tags)
+                        VALUES (%s, %s, %s, %s, %s)
                         RETURNING id
                     """, (
-                        user_id,
                         activity_data.get('name'),
                         activity_data.get('description'),
                         activity_data.get('start_at'),
@@ -411,18 +370,17 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def get_user_activities(self, user_id: int, limit: int = 50) -> List[dict]:
-        """Get activities for a user"""
+    def get_all_activities(self, limit: int = 50) -> List[dict]:
+        """Get all activities for the single user"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
                         SELECT * FROM activities 
-                        WHERE user_id = %s 
                         ORDER BY start_at DESC 
                         LIMIT %s
-                    """, (user_id, limit))
+                    """, (limit,))
                     return [dict(row) for row in cur.fetchall()]
             except psycopg2.Error as e:
                 print(f"Error retrieving activities: {e}")
@@ -431,22 +389,66 @@ class DatabaseManager:
                 conn.close()
         return []
 
+    def update_activity(self, activity_id: int, activity_data: dict) -> bool:
+        """Update an activity"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE activities 
+                        SET name = %s, description = %s, start_at = %s, end_at = %s, tags = %s
+                        WHERE id = %s
+                    """, (
+                        activity_data.get('name'),
+                        activity_data.get('description'),
+                        activity_data.get('start_at'),
+                        activity_data.get('end_at'),
+                        activity_data.get('tags', []),
+                        activity_id
+                    ))
+                    conn.commit()
+                    return cur.rowcount > 0
+            except psycopg2.Error as e:
+                print(f"Error updating activity: {e}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
+        return False
+
+    def delete_activity(self, activity_id: int) -> bool:
+        """Delete an activity"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM activities WHERE id = %s", (activity_id,))
+                    conn.commit()
+                    return cur.rowcount > 0
+            except psycopg2.Error as e:
+                print(f"Error deleting activity: {e}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
+        return False
+
     # ============================================================================
-    # EVENT MANAGEMENT
+    # EVENTS MANAGEMENT (SIMPLIFIED)
     # ============================================================================
 
-    def create_event(self, user_id: int, event_data: dict) -> Optional[int]:
+    def create_event(self, event_data: dict) -> Optional[int]:
         """Create a new event"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO event (user_id, name, start_time, end_time, location, priority, source)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO event (name, start_time, end_time, location, priority, source)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING event_id
                     """, (
-                        user_id,
                         event_data.get('name'),
                         event_data.get('start_time'),
                         event_data.get('end_time'),
@@ -465,18 +467,17 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def get_user_events(self, user_id: int, limit: int = 50) -> List[dict]:
-        """Get events for a user"""
+    def get_all_events(self, limit: int = 50) -> List[dict]:
+        """Get all events"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
                         SELECT * FROM event 
-                        WHERE user_id = %s 
                         ORDER BY start_time DESC 
                         LIMIT %s
-                    """, (user_id, limit))
+                    """, (limit,))
                     return [dict(row) for row in cur.fetchall()]
             except psycopg2.Error as e:
                 print(f"Error retrieving events: {e}")
@@ -485,22 +486,41 @@ class DatabaseManager:
                 conn.close()
         return []
 
+    def get_upcoming_events(self, days_ahead: int = 7) -> List[dict]:
+        """Get upcoming events within specified days"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        SELECT * FROM event 
+                        WHERE start_time >= CURRENT_TIMESTAMP 
+                        AND start_time <= CURRENT_TIMESTAMP + INTERVAL '%s days'
+                        ORDER BY start_time ASC
+                    """, (days_ahead,))
+                    return [dict(row) for row in cur.fetchall()]
+            except psycopg2.Error as e:
+                print(f"Error retrieving upcoming events: {e}")
+                return []
+            finally:
+                conn.close()
+        return []
+
     # ============================================================================
-    # ALERT MANAGEMENT
+    # ALERTS MANAGEMENT (SIMPLIFIED)
     # ============================================================================
 
-    def create_alert(self, user_id: int, alert_data: dict) -> Optional[int]:
+    def create_alert(self, alert_data: dict) -> Optional[int]:
         """Create a new alert"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO alert (user_id, alert_type, title, message, trigger_time, priority, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO alert (alert_type, title, message, trigger_time, priority, status)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING alert_id
                     """, (
-                        user_id,
                         alert_data.get('alert_type'),
                         alert_data.get('title'),
                         alert_data.get('message'),
@@ -519,8 +539,8 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def get_user_alerts(self, user_id: int, status: str = None) -> List[dict]:
-        """Get alerts for a user"""
+    def get_all_alerts(self, status: str = None) -> List[dict]:
+        """Get all alerts"""
         conn = self.get_connection()
         if conn:
             try:
@@ -528,15 +548,14 @@ class DatabaseManager:
                     if status:
                         cur.execute("""
                             SELECT * FROM alert 
-                            WHERE user_id = %s AND status = %s
+                            WHERE status = %s
                             ORDER BY trigger_time DESC
-                        """, (user_id, status))
+                        """, (status,))
                     else:
                         cur.execute("""
                             SELECT * FROM alert 
-                            WHERE user_id = %s 
                             ORDER BY trigger_time DESC
-                        """, (user_id,))
+                        """)
                     return [dict(row) for row in cur.fetchall()]
             except psycopg2.Error as e:
                 print(f"Error retrieving alerts: {e}")
@@ -544,6 +563,25 @@ class DatabaseManager:
             finally:
                 conn.close()
         return []
+
+    def update_alert_status(self, alert_id: int, status: str) -> bool:
+        """Update alert status"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE alert SET status = %s WHERE alert_id = %s
+                    """, (status, alert_id))
+                    conn.commit()
+                    return cur.rowcount > 0
+            except psycopg2.Error as e:
+                print(f"Error updating alert status: {e}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
+        return False
 
     # ============================================================================
     # RECOMMENDATION MANAGEMENT
@@ -620,9 +658,81 @@ class DatabaseManager:
                 conn.close()
         return False
 
-    def initialize_tables(self):
-        """Initialize any missing tables (for backward compatibility)"""
-        return True
+    def get_database_stats(self) -> dict:
+        """Get overall database statistics"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    stats = {}
+                    
+                    # Count sessions
+                    cur.execute("SELECT COUNT(*) FROM chat_sessions")
+                    stats['total_sessions'] = cur.fetchone()[0]
+                    
+                    # Count messages
+                    cur.execute("SELECT COUNT(*) FROM chat_messages")
+                    stats['total_messages'] = cur.fetchone()[0]
+                    
+                    # Count activities
+                    cur.execute("SELECT COUNT(*) FROM activities")
+                    stats['total_activities'] = cur.fetchone()[0]
+                    
+                    # Count events
+                    cur.execute("SELECT COUNT(*) FROM event")
+                    stats['total_events'] = cur.fetchone()[0]
+                    
+                    # Count alerts
+                    cur.execute("SELECT COUNT(*) FROM alert")
+                    stats['total_alerts'] = cur.fetchone()[0]
+                    
+                    # Count summaries
+                    cur.execute("SELECT COUNT(*) FROM chat_summaries")
+                    stats['total_summaries'] = cur.fetchone()[0]
+                    
+                    return stats
+                    
+            except psycopg2.Error as e:
+                print(f"Error getting database stats: {e}")
+                return {}
+            finally:
+                conn.close()
+        return {}
+
+    def cleanup_old_data(self, days_old: int = 90) -> bool:
+        """Clean up old data (sessions, messages older than specified days)"""
+        conn = self.get_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    # Delete old sessions and their related data
+                    cur.execute("""
+                        DELETE FROM chat_sessions 
+                        WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
+                    """, (days_old,))
+                    
+                    sessions_deleted = cur.rowcount
+                    
+                    # Delete old activities
+                    cur.execute("""
+                        DELETE FROM activities 
+                        WHERE start_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
+                    """, (days_old,))
+                    
+                    activities_deleted = cur.rowcount
+                    
+                    conn.commit()
+                    
+                    print(f"🧹 Cleanup completed: {sessions_deleted} sessions, {activities_deleted} activities deleted")
+                    return True
+                    
+            except psycopg2.Error as e:
+                print(f"Error during cleanup: {e}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
+        return False
 
     def test_connection(self) -> bool:
         """Test database connection"""
@@ -641,7 +751,7 @@ class DatabaseManager:
         return False
 
 # ============================================================================
-# USAGE EXAMPLE
+# USAGE EXAMPLE FOR SINGLE USER
 # ============================================================================
 
 if __name__ == "__main__":
@@ -649,33 +759,55 @@ if __name__ == "__main__":
     db = DatabaseManager()
     
     if db.test_connection():
-        print("✅ Database connection successful!")
+        print("✅ Single-user database connection successful!")
         
-        # Example usage:
-        # 1. Create a user
-        user_data = {
-            'user_name': 'Test User',
+        # Test profile management
+        profile_data = {
             'phone_number': '0123456789',
-            'year_of_birth': 2000,
-            'address': 'Ha Noi',
+            'year_of_birth': 1990,
+            'address': 'Ha Noi, Vietnam',
             'major': 'Computer Science',
-            'additional_info': 'Test user for development'
+            'additional_info': 'AI enthusiast and developer'
         }
         
-        # user_id = db.create_user(user_data)
-        # print(f"Created user with ID: {user_id}")
+        # Update profile
+        if db.update_user_profile(profile_data):
+            print("✅ Profile updated successfully")
         
-        # 2. Create a session
-        # session_id = db.create_session(user_id)
-        # print(f"Created session: {session_id}")
+        # Get profile
+        profile = db.get_user_profile()
+        print(f"📝 Current profile: {profile}")
         
-        # 3. Save messages
-        # db.save_message(session_id, user_id, "user", "Hello!")
-        # db.save_message(session_id, user_id, "assistant", "Hi there!")
+        # Test session and messaging
+        session_id = db.create_session()
+        if session_id:
+            print(f"📅 Created session: {session_id}")
+            
+            # Test auto-summarization with 5 messages
+            test_messages = [
+                ("user", "Hello, I'm John"),
+                ("assistant", "Hi John! How can I help you?"),
+                ("user", "I work as a software engineer"),
+                ("assistant", "That's great! What kind of projects do you work on?"),
+                ("user", "I develop AI applications"),  # This should trigger summarization
+            ]
+            
+            for role, content in test_messages:
+                db.save_message(session_id, role, content)
+                print(f"💬 Saved: {role} - {content}")
+            
+            # Check summary status
+            stats = db.get_session_summary_status(session_id)
+            print(f"📊 Summary status: {stats}")
+            
+            # Get final summary
+            summary = db.get_session_summary(session_id)
+            if summary:
+                print(f"📋 Session summary: {summary['summarize']}")
         
-        # 4. Get chat history
-        # history = db.get_chat_history(session_id)
-        # print(f"Chat history: {history}")
+        # Test database stats
+        stats = db.get_database_stats()
+        print(f"📈 Database stats: {stats}")
         
     else:
         print("❌ Database connection failed!")

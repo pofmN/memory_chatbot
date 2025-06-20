@@ -31,8 +31,8 @@ tavily_api = os.environ.get("TAVILY_API_KEY")
 def init_components():
     db = DatabaseManager()
     llm = ChatOpenAI(
-        model_name="gpt-4o-mini", # gpt-4o, gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, ada-2, 3-small
-        temperature=0.5,
+        model_name="gpt-4o", # gpt-4o, gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, ada-2, 3-small
+        temperature=0.2,
         max_tokens=1000,
         base_url="https://warranty-api-dev.picontechnology.com:8443",  # Ensure /v1 path if OpenAI-compatible
         openai_api_key=openai_api,

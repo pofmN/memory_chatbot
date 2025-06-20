@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.storage import DatabaseManager
 from database.storage import DatabaseManager
 from typing import Optional, List
+from extract_user_info import save_user_information
 import json
 
 load_dotenv()
@@ -82,17 +83,25 @@ async def get_history_summary(session_id: str) -> str:
     return f"Summary for session {summary}"
 
 @mcp.tool()
-async def get_user_profile(user_name: str) -> str:
+async def add_user_info(user_input: str) -> str:
     """
-    Retrieve the user profile information by user name.
-    """
-    user_profile = db.get_user_by_name(user_name)
-    if not user_profile:
-        return f"No profile found for user {user_name}."
+    Extract user information from the input string.
     
-    # Convert the user profile to a JSON string
-    profile_json = json.dumps(user_profile, indent=2, ensure_ascii=False)
-    return f"User Profile for {user_name}:\n{profile_json}"
+    Args:
+        user_input (str): The input string containing user information.
+        
+    Returns:
+        dict: Extracted user information as a dictionary
+    """
+    try:    
+        user_info = save_user_information(user_input)
+    except json.JSONDecodeError as e:
+        return {
+            "error": str(e),
+            "response": "Failed to extract user information."
+        }
+
+    return user_info
 
 @mcp.tool()
 async def test_mcp_server() -> str:

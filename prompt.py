@@ -15,11 +15,5 @@ Return the output **as a valid JSON object only**, with no code blocks, no expla
 
 Only include the fields that are present in the input. Do **not** include missing fields.
 
-Example output format (do not include this explanation in your response):
-
-{
-  "user_name": "Nguyễn Văn A",
-  "major": "IT",
-  "year_of_birth": 2001
-}
+Only make a decision when you are really sure.
 """

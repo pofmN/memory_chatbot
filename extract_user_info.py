@@ -8,6 +8,7 @@ from typing import List, Annotated, Literal, Optional
 from langchain.chat_models import init_chat_model
 import os
 import json
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from database.storage import DatabaseManager
 from prompt import _extract_user_information_promt
@@ -15,20 +16,22 @@ from prompt import _extract_user_information_promt
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+openai_api = os.environ.get("OPENAI_API_KEY")
 
 system_prompt = _extract_user_information_promt
 
-llms = init_chat_model(
-    "google_genai:gemini-2.0-flash",
-    temperature=0.2,
-    max_tokens=1000,
-    api_key=GOOGLE_API_KEY
-)
+llm = ChatOpenAI(
+        model_name="gpt-4o", # gpt-4o, gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, ada-2, 3-small
+        temperature=0.1 ,
+        max_tokens=1000,
+        base_url="https://warranty-api-dev.picontechnology.com:8443",  # Ensure /v1 path if OpenAI-compatible
+        openai_api_key=openai_api,
+    )
 
 db = DatabaseManager()
 
 class UserInformation(BaseModel):
-    user_name: Annotated[str, Field(description="Full name of the user")]
+    user_name: Annotated[Optional[str], Field(description="Personal name of the user")]
     phone_number: Annotated[Optional[str], Field(description="User's phone number")]
     year_of_birth: Annotated[Optional[int], Field(description="User's year of birth")]
     address: Annotated[Optional[str], Field(description="User's address (city, province, or full address)")]
@@ -37,29 +40,35 @@ class UserInformation(BaseModel):
 
 def extract_user_information(
     user_input: str
-) -> Annotated[dict, Field(description="Extracted user information in JSON format")]:
-    """
-    Extract user information from the input string.
-    
-    Args:
-        user_input (str): The input string containing user information.
-        
-    Returns:
-        dict: Extracted user information as a dictionaryß
-    """
+) -> dict:
+    """Extract user information using the provided LLM instance."""
     prompt = f"""{system_prompt}
+    IMPORTANT: Only extract information that is explicitly mentioned in the user input. 
+    If a field is not mentioned, do not include it in the response at all.
     Here is the user input: {user_input}
     """
-    response = llms.with_structured_output(UserInformation).invoke(prompt) # Example output for testing purposes
+    
+    # ✅ Use the passed LLM instance
+    response = llm.with_structured_output(UserInformation).invoke(prompt)
+    
     try: 
-        response_text = response.model_dump()
-        return response_text
-    except json.JSONDecodeError as e:
-        print(f"JSON decoding error: {e}")
-        return {
-            "error": str(e),
-            "response": response_text
-        }
+        response_data = response.model_dump()
+        
+        # ✅ Filter out None/empty values to only update mentioned fields
+        filtered_data = {}
+        for key, value in response_data.items():
+            if value is not None and value != "":
+                # For strings, also check if it's not just whitespace
+                if isinstance(value, str) and value.strip():
+                    filtered_data[key] = value.strip()
+                elif not isinstance(value, str):
+                    filtered_data[key] = value
+        
+        print(f"🔍 Extracted fields: {list(filtered_data.keys())}")
+        return filtered_data
+    except Exception as e:
+        print(f"❌ Error extracting user information: {e}")
+        return {"error": "Failed to extract user information: " + str(e)}
 
 def validate_user_information(
     user_info: dict
@@ -87,8 +96,8 @@ def validate_user_information(
     return True
 
 def save_user_information(
-    user_input: str
-) -> None:
+    user_input: str,
+) -> str:
     """
     Save the extracted user information to a database or file.
     
@@ -97,15 +106,15 @@ def save_user_information(
     """
     user_info = extract_user_information(user_input)
     if validate_user_information(user_info):
-        db.add_user_info(user_info)
+        db.update_user_profile(user_info)
     else:
         print("Invalid user information:", user_info)
-    print("User information saved:", json.dumps(user_info, indent=2, ensure_ascii=False))
+    #print("User information saved:", json.dumps(user_info, indent=2, ensure_ascii=False))
+    return user_info
 
 
-
-user_input_example = "Nguyễn Văn A, sinh năm 2001, học IT tại Đại học Bách Khoa, số điện thoại 0123456789, sống tại Hà Nội."
-result = extract_user_information(user_input_example)
-#print(result)
-print(json.dumps(result, indent=2, ensure_ascii=False))
-print("User name: "+result.get("user_name"))
+# user_input_example = "my name is Pham Van Nam, i was born in 2003, now i student in DaNang and intern in HBG company"
+# result = save_user_information(user_input_example)
+# #print(result)
+# print(json.dumps(result, indent=2, ensure_ascii=False))
+# print("User name: "+result.get("user_name"))
