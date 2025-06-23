@@ -1,24 +1,19 @@
 import streamlit as st
 from dotenv import load_dotenv
-from database.storage import DatabaseManager
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_tavily import TavilySearch
-from langchain.tools import StructuredTool
-from typing import Annotated
 from typing_extensions import TypedDict
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 import asyncio
 import json
 import os
+from database.storage import DatabaseManager
 from langchain_openai import ChatOpenAI
 from extract_user_info import save_user_information
 import uuid
 # Load environment variables
 load_dotenv()
 openai_api = os.environ.get("OPENAI_API_KEY")
+db = DatabaseManager()
 
 llm = ChatOpenAI(
         model_name="gpt-4o-mini", # gpt-4o, gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, ada-2, 3-small
@@ -77,6 +72,7 @@ def update_user_information(user_input: str):
         return user_input
     except Exception as e:
         return f"Error updating user information: {str(e)}"
+
 
 # user_input = "my name is Pham Van Nam, i was born in 2003, now i student in DaNang and intern in HBG company"
 # user_info = update_user_information(user_input)

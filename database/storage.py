@@ -224,7 +224,7 @@ class DatabaseManager:
                     cur.execute("""
                         SELECT * FROM chat_messages
                         WHERE session_id = %s 
-                    """, (session_id))
+                    """, (session_id,))
                     return [dict(row) for row in cur.fetchall()]
             except psycopg2.Error as e:
                 print(f"Error retrieving chat history: {e}")
