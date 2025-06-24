@@ -1,42 +1,56 @@
-# Memory Chat with MCP Integration
+# AI Chatbot with Memory & Event Management
 
-A sophisticated chatbot application with persistent memory and web search capabilities, built using LangGraph, Streamlit, and Model Context Protocol (MCP).
+A sophisticated AI chatbot application with persistent memory, event management, user information extraction, and web search capabilities. Built using LangGraph, Streamlit, SQLAlchemy, and Model Context Protocol (MCP).
 
 ## 🚀 Features
 
-- **Persistent Chat Memory**: Stores and retrieves conversation history using PostgreSQL
+- **Persistent Chat Memory**: Stores and retrieves conversation history using PostgreSQL with SQLAlchemy ORM
+- **User Information Extraction**: Automatically extracts and stores user profile information from conversations
+- **Event Management**: Intelligent event extraction from natural language and calendar management
 - **Web Search Integration**: Real-time web search powered by Tavily API through MCP server
-- **Session Management**: Create, manage, and switch between multiple chat sessions
-- **Interactive UI**: Clean Streamlit interface for seamless user experience
-- **MCP Architecture**: Modular design using Model Context Protocol for tool integration
+- **Session Management**: Single-user persistent session with auto-summarization
+- **Customizable AI Personality**: Multiple personality presets and communication styles
+- **Interactive UI**: Clean Streamlit interface with sidebar customization
+- **Modular Architecture**: Well-structured codebase with separate agents and tools
+- **SQLAlchemy ORM**: Robust database operations with proper relationship management
 - **Docker Support**: Complete containerized deployment with Docker Compose
-- **Async Support**: Efficient handling of concurrent operations
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Streamlit     │    │   LangGraph     │    │  MCP Server     │
-│   Frontend      │◄──►│   Workflow      │◄──►│   (FastMCP)     │
+│   Frontend      │◄──►│   Workflow      │◄──►│   (Python)      │
+│   (UI Layer)    │    │   (Core Logic)  │    │   (Tools)       │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PostgreSQL    │    │   LLM Provider  │    │   Tavily API    │
-│   Database      │    │   (Gemini)      │    │   Web Search    │
+│   PostgreSQL    │    │   OpenAI GPT    │    │   Tavily API    │
+│   + SQLAlchemy  │    │   4o-mini       │    │   Web Search    │
+│   (Database)    │    │   (LLM)         │    │   (External)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+         │
+         │
+┌─────────────────┐
+│   Specialized   │
+│   Agents:       │
+│   • User Info   │
+│   • Events      │
+│   • Memory      │
+└─────────────────┘
 ```
 
 ## 📋 Prerequisites
 
 - **Backend:** Python 3.8+
-- **AI:** Google Gemini 2.0 Flash, GPT4.1-mini
-- **Database:** PostgreSQL 15
+- **AI:** OpenAI GPT-4o-mini (with custom endpoint)
+- **Database:** PostgreSQL 15+ with SQLAlchemy ORM
 - **UI:** Streamlit
 - **Containers:** Docker & Docker Compose
 - **Database Management:** pgAdmin 4
-- **API Keys:** Tavily API key, Google Gemini API key
+- **API Keys:** Tavily API key, OpenAI API key
 
 ## 🛠️ Installation
 
@@ -56,8 +70,19 @@ A sophisticated chatbot application with persistent memory and web search capabi
    Edit `.env` file with your API keys:
    ```env
    # API Keys (Required)
+   OPENAI_API_KEY=your_openai_api_key
    TAVILY_API_KEY=your_tavily_api_key
-   GEMINI_API_KEY=your_gemini_api_key
+   GOOGLE_API_KEY=your_google_api_key
+   
+   # Database Configuration
+   DB_HOST=postgres
+   DB_PORT=5432
+   DB_NAME=chatbot_db
+   DB_USER=chatbot_user
+   DB_PASSWORD=chatbot_password
+   
+   # MCP Server Configuration
+   MCP_SERVER_PATH=./mcp_server/server.py
    ```
 
 3. **Start with Docker Compose**
@@ -96,6 +121,7 @@ A sophisticated chatbot application with persistent memory and web search capabi
    # Install PostgreSQL and create database
    createdb chatbot_db
    createuser chatbot_user
+   psql -d chatbot_db -f database/init.sql
    ```
 
 4. **Configure environment**
@@ -113,8 +139,9 @@ A sophisticated chatbot application with persistent memory and web search capabi
    DB_PASSWORD=your_password
    
    # API Keys
+   OPENAI_API_KEY=your_openai_api_key
    TAVILY_API_KEY=your_tavily_api_key
-   GEMINI_API_KEY=your_gemini_api_key
+   GOOGLE_API_KEY=your_google_api_key
    ```
 
 5. **Run the application**
@@ -134,71 +161,126 @@ docker-compose up -d
 streamlit run app.py
 ```
 
-### MCP Server (Standalone)
+### Customization Features
+- **AI Personality**: Choose from predefined personalities or create custom ones
+- **Communication Style**: Conversational, Formal, Technical, Simple, Detailed, Brief
+- **Response Length**: Brief, Balanced, Detailed, Comprehensive
+- **Language**: English, Vietnamese, Mixed, Auto-detect
+- **Preset Management**: Save and load custom AI configurations
+
+### MCP Server Commands
 ```bash
 cd mcp_server
-python mcp_server.py
-```
-
-### CLI Client for Testing
-```bash
-cd mcp_server
-python chatbot_client.py
-```
-
-## 📁 Project Structure
-
-```
-memory_chat/
-├── app.py                   # Main Streamlit application
-├── storage.py               # Database manager and operations
-├── requirements.txt         # Python dependencies
-├── docker-compose.yaml      # Docker orchestration
-├── Dockerfile              # Container configuration
-├── .env.example            # Environment variables template
-├── .gitignore             # Git ignore rules
-├── README.md              # This file
-│
-├── mcp_server/            # MCP Server implementation
-│   ├── mcp_server.py      # FastMCP server with tools
-│   ├── chatbot_client.py  # CLI client for testing
-│   └── storage.py         # Database operations
-│
-└── init.sql               # Database initialization script
+python server.py
 ```
 
 ## 🔧 Configuration
 
-### Database Schema
+### Database Schema (SQLAlchemy Models)
 
-The application uses PostgreSQL with these tables:
-- `sessions`: Chat session metadata and summaries
-- `messages`: Individual chat messages with timestamps
-- `search_history`: Web search queries and results
+The application uses PostgreSQL with SQLAlchemy ORM:
 
-### MCP Tools
+**Core Tables:**
+- `user_profile`: Single user profile information
+- `chat_sessions`: Chat session metadata
+- `chat_messages`: Individual messages with relationships
+- `chat_summaries`: Auto-generated conversation summaries
 
-The MCP server provides these tools:
-- `search_web`: Web search using Tavily API
-- `get_history_summary`: Retrieve chat session summaries
-- `test_mcp_server`: Health check endpoint
+**Feature Tables:**
+- `activities`: User activities and tasks
+- `event`: Calendar events and appointments
+- `alert`: System alerts and notifications
+- `recommendation`: AI-generated recommendations
+- `activities_analysis`: Activity frequency analysis
+
+### Specialized Agents
+
+**User Information Agent:**
+- Extracts personal information from conversations
+- Validates and stores user profile data
+- Handles profile updates and corrections
+
+**Event Extraction Agent:**
+- Parses natural language for events and appointments
+- Converts relative dates to absolute timestamps
+- Manages event priorities and locations
+
+**Memory Tools:**
+- Auto-summarization every 5 messages
+- Intelligent history retrieval
+- Context-aware conversation memory
 
 ### Environment Variables
 
 ```env
-# Database (Auto-configured in Docker)
+# Database Configuration
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=chatbot_db
 DB_USER=chatbot_user
 DB_PASSWORD=chatbot_password
 
-# Required API Keys
+# API Keys
+OPENAI_API_KEY=your_openai_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
+GOOGLE_API_KEY=your_google_api_key_here
+
+# MCP Server
+MCP_SERVER_PATH=./mcp_server/server.py
+
+# UI Configuration
+PAGE_TITLE=AI Chatbot with Memory
+PAGE_ICON=🤖
+LAYOUT=wide
 ```
 
 ## 📚 API Reference
+
+### Agent Processing
+
+#### User Information Extraction
+```python
+from agents.extract_user_info_agent import create_user_info_extraction_agent
+
+agent = create_user_info_extraction_agent(llm)
+result = agent.process("My name is John, I'm 25 years old from NYC")
+
+if result.get("success"):
+    print(f"Updated fields: {result['updated_fields']}")
+    print(f"Data: {result['extracted_data']}")
+```
+
+#### Event Extraction
+```python
+from agents.extract_event_agent import create_event_extraction_agent
+
+agent = create_event_extraction_agent(llm)
+result = agent.process("Meeting with John tomorrow at 2 PM in conference room A")
+```
+
+### Database Operations (SQLAlchemy)
+
+```python
+from database.storage import DatabaseManager
+
+db = DatabaseManager()
+
+# User profile management
+profile = db.get_user_profile()
+success = db.update_user_profile({"user_name": "John", "age": 25})
+
+# Session management
+session_id = db.create_session()
+db.save_message(session_id, "user", "Hello!")
+history = db.get_chat_history(session_id)
+
+# Event management
+event_id = db.create_event({
+    "name": "Team Meeting",
+    "start_time": datetime.now(),
+    "location": "Conference Room A"
+})
+```
 
 ### MCP Server Tools
 
@@ -207,9 +289,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 await session.call_tool(
     "search_web",
     arguments={
-        "query": "Python programming",
-        "max_results": 5,
-        "search_depth": "basic"  # or "advanced"
+        "query": "Python programming best practices",
+        "max_results": 3
     }
 )
 ```
@@ -224,134 +305,160 @@ await session.call_tool(
 )
 ```
 
-### Database Operations
+## 🧪 Testing
 
-```python
-from storage import DatabaseManager
-
-db = DatabaseManager()
-
-# Session management
-session_id = db.create_session()
-db.save_message(session_id, "user", "Hello!")
-history = db.get_chat_history(session_id)
-summary = db.get_session_summary(session_id)
+### Test User Information Agent
+```bash
+cd agents/extract_user_info_agent
+python extract_user_info.py
 ```
 
-## 🧪 Testing
+### Test Event Extraction Agent
+```bash
+cd agents/extract_event_agent
+python extract_event.py
+```
+
+### Test Database Operations
+```bash
+# Test SQLAlchemy models
+python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print('✅ Database connected!')"
+
+# Test with Docker
+docker-compose exec chatbot-app python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print('✅ Database connected!')"
+```
 
 ### Test MCP Server
 ```bash
 cd mcp_server
-python chatbot_client.py
-# Commands: test, help, settings, exit
+python server.py
 ```
 
-### Test Database Connection
-```bash
-# Local testing
-python -c "from storage import DatabaseManager; db = DatabaseManager(); print('Database connected!')"
+## 🔍 Features Deep Dive
 
-# Docker testing
-docker-compose exec chatbot-app python -c "from storage import DatabaseManager; db = DatabaseManager(); print('Database connected!')"
-```
+### AI Personality Customization
+- **Personality Presets**: Friendly Assistant, Professional Advisor, Creative Companion, Study Buddy, Casual Friend
+- **Custom Personalities**: Write your own AI personality descriptions
+- **Communication Styles**: Conversational, Formal, Technical, Simple, Detailed, Brief
+- **Response Lengths**: Brief, Balanced, Detailed, Comprehensive
+- **Language Support**: English, Vietnamese, Mixed, Auto-detect
+- **Preset Management**: Save and load custom configurations
 
-### Docker Health Checks
-```bash
-# Check container health
-docker-compose ps
+### Intelligent Memory System
+- **Auto-Summarization**: Automatically summarizes every 5 messages
+- **Context Awareness**: Maintains conversation context across sessions
+- **User Profile Integration**: Remembers user information and preferences
+- **Smart Retrieval**: Contextual history retrieval for relevant responses
 
-# View container logs
-docker-compose logs chatbot-app
-docker-compose logs postgres
-```
+### Event Management
+- **Natural Language Parsing**: "Meeting tomorrow at 2 PM" → structured event
+- **Smart Date Recognition**: Handles relative dates and times
+- **Priority Detection**: Infers event importance from language cues
+- **Location Extraction**: Physical and virtual meeting locations
+- **Validation**: Ensures event data consistency
 
-## 🔍 CLI Commands
-
-When using `chatbot_client.py`:
-
-- `help` - Show available commands
-- `settings` - Configure search parameters (max results, depth)
-- `test` - Test MCP server connection
-- `history` - Fetch chat history summary
-- `exit/quit/bye` - Exit the application
+### User Information Extraction
+- **Automatic Detection**: Extracts personal info from natural conversation
+- **Profile Building**: Incrementally builds user profile
+- **Data Validation**: Validates phone numbers, dates, and other fields
+- **Update Handling**: Manages profile corrections and updates
 
 ## 🐛 Troubleshooting
 
+### Common Issues
+
+**SQLAlchemy Import Errors**
+```bash
+# Ensure all dependencies are installed
+pip install sqlalchemy>=2.0.0 psycopg2-binary>=2.9.0
+
+# Check Python path
+python -c "import sqlalchemy; print(sqlalchemy.__version__)"
+```
+
+**Database Connection Issues**
+```bash
+# Test connection
+python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print(db.test_connection())"
+
+# Check database status
+docker-compose exec postgres psql -U chatbot_user -d chatbot_db -c "SELECT 1;"
+```
+
+**Agent Processing Errors**
+```bash
+# Test user info agent
+python agents/extract_user_info_agent/extract_user_info.py
+
+# Test event agent
+python agents/extract_event_agent/extract_event.py
+```
+
+**MCP Server Issues**
+```bash
+# Check MCP server path
+python mcp_server/server.py
+
+# Verify environment variables
+cat .env | grep MCP_SERVER_PATH
+```
+
 ### Docker Issues
 
-**Build Failures**
+**Container Build Failures**
 ```bash
-# Clean build
-docker-compose down
+# Clean rebuild
+docker-compose down --volumes
 docker-compose build --no-cache
 docker-compose up -d
 ```
 
-**Container Connection Issues**
+**Database Initialization**
 ```bash
-# Check container network
-docker network ls
-docker-compose logs -f
-```
-
-### Local Development Issues
-
-**MCP Server Connection Failed**
-```bash
-# Verify MCP server path
-python mcp_server/mcp_server.py
-
-# Check environment variables
-cat .env | grep -v "^#"
-```
-
-**Database Connection Error**
-```bash
-# Check PostgreSQL service
-sudo service postgresql status  # Linux
-brew services list | grep postgres  # macOS
-
-# Test connection
-psql -h localhost -U chatbot_user -d chatbot_db
-```
-
-**Import Errors**
-```bash
-# Ensure virtual environment is activated
-source venv/bin/activate
-
-# Reinstall dependencies
-pip install -r requirements.txt --force-reinstall
+# Force database recreation
+docker-compose down --volumes
+docker-compose up -d postgres
+docker-compose exec postgres psql -U chatbot_user -d chatbot_db -f /docker-entrypoint-initdb.d/init.sql
 ```
 
 ## 🚦 Deployment
 
 ### Production Deployment
 
-1. **Set up production environment**
+1. **Environment Configuration**
    ```bash
-   # Use production environment file
+   # Production environment
    cp .env.example .env.production
-   # Edit with production values
-   ```
-
-2. **Deploy with Docker**
-   ```bash
-   # Production deployment
-   docker-compose up -d --build
    
-   # Monitor logs
-   docker-compose logs -f
+   # Edit with production values
+   nano .env.production
    ```
 
-3. **Database backup**
+2. **Database Backup & Migration**
    ```bash
    # Backup database
-   docker-compose exec postgres pg_dump -U chatbot_user chatbot_db > backup.sql
+   docker-compose exec postgres pg_dump -U chatbot_user chatbot_db > backup_$(date +%Y%m%d_%H%M%S).sql
    
    # Restore database
    docker-compose exec -T postgres psql -U chatbot_user chatbot_db < backup.sql
+   ```
+
+3. **Production Deployment**
+   ```bash
+   # Deploy with production settings
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   
+   # Monitor logs
+   docker-compose logs -f --tail=100
+   ```
+
+4. **Health Checks**
+   ```bash
+   # Check all services
+   docker-compose ps
+   
+   # Test database connection
+   docker-compose exec chatbot-app python -c "from database.storage import DatabaseManager; print('✅' if DatabaseManager().test_connection() else '❌')"
    ```
 
 ## 🤝 Contributing
@@ -364,11 +471,22 @@ pip install -r requirements.txt --force-reinstall
 
 ### Development Guidelines
 
-- Follow PEP 8 for Python code
-- Add type hints where appropriate
-- Write docstrings for functions and classes
-- Update tests for new features
-- Update documentation
+- **Code Style**: Follow PEP 8 for Python code
+- **Type Hints**: Add type hints for better code clarity
+- **Documentation**: Write comprehensive docstrings
+- **Testing**: Add tests for new features
+- **Modular Design**: Keep components separate and focused
+- **Error Handling**: Implement proper exception handling
+- **Logging**: Add appropriate logging for debugging
+
+### Project Structure Guidelines
+
+- **Agents**: Place specialized agents in `agents/` directory
+- **Tools**: Implement tools in `tools/` directory
+- **UI Components**: Keep UI logic in `ui/` directory
+- **Configuration**: Centralize config in `config/` directory
+- **Database**: All database operations in `database/` directory
+- **Utils**: Helper functions in `utils/` directory
 
 ## 📝 License
 
@@ -376,31 +494,37 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [FastMCP](https://github.com/fastmcp/fastmcp) for MCP protocol implementation
-- [Tavily](https://tavily.com/) for web search API
 - [LangGraph](https://langchain-ai.github.io/langgraph/) for workflow orchestration
-- [Streamlit](https://streamlit.io/) for the web interface
-- [PostgreSQL](https://www.postgresql.org/) for robust database management
+- [SQLAlchemy](https://sqlalchemy.org/) for robust ORM capabilities
+- [Streamlit](https://streamlit.io/) for the interactive web interface
+- [PostgreSQL](https://www.postgresql.org/) for reliable database management
+- [Tavily](https://tavily.com/) for web search API capabilities
+- [OpenAI](https://openai.com/) for GPT-4o-mini language model
+- [Model Context Protocol](https://github.com/modelcontextprotocol/servers) for tool integration
 
 ## 📞 Support
 
-If you encounter any issues or have questions:
+For support and questions:
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/pofmN/memory_chatbot/issues)
-2. **Create new issue**: Include error logs, environment details, and steps to reproduce
-3. **Discussion**: Use GitHub Discussions for general questions and ideas
+1. **Check Documentation**: Review this README and inline documentation
+2. **GitHub Issues**: [Create an issue](https://github.com/pofmN/memory_chatbot/issues) with detailed information
+3. **Discussions**: Use GitHub Discussions for general questions
 
-### Getting Help
+### When Reporting Issues
 
-- Include your environment details (OS, Python version, Docker version)
-- Share relevant error logs
-- Describe steps to reproduce the issue
-- Mention if you're using Docker or local development
+Include the following information:
+- **Environment**: OS, Python version, Docker version
+- **Error Logs**: Complete error messages and stack traces
+- **Steps to Reproduce**: Detailed steps to reproduce the issue
+- **Configuration**: Relevant environment variables (without API keys)
+- **Expected vs Actual**: What you expected vs what happened
 
 ---
 
-**Built with ❤️ using Python, FastMCP, LangGraph, and Streamlit**
+**Built with ❤️ using Python, SQLAlchemy, LangGraph, and Streamlit**
 
 [![GitHub](https://img.shields.io/badge/GitHub-pofmN/memory_chatbot-blue?logo=github)](https://github.com/pofmN/memory_chatbot)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)](https://python.org)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red?logo=sqlalchemy)](https://sqlalchemy.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit)](https://streamlit.io)
