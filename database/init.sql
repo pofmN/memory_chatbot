@@ -59,14 +59,14 @@ CREATE TABLE recommendation (
 -- Create event table
 CREATE TABLE event (
     event_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    event_name VARCHAR(100) NOT NULL,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     location VARCHAR(100),
     priority VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    source VARCHAR(50)
+    description TEXT
 );
 
 -- Create activities table

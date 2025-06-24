@@ -1,15 +1,13 @@
 from langgraph.graph import StateGraph, START, END
-from pydantic import BaseModel, Field
+from typing import Annotated, Literal, Optional
 from typing_extensions import TypedDict
-from typing import List, Annotated, Literal, Optional
-from langchain.chat_models import init_chat_model
 import os
 import json
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-import datetime
-from database.storage import DatabaseManager
-from prompt import _extract_user_information_promt
+from core.base.schema import UserInformation
+from agent.extract_user_info_agent.services import update_user_profile, get_user_profile
+from agent.extract_user_info_agent.prompt import _extract_user_information_promt
 
 
 load_dotenv()
@@ -26,16 +24,14 @@ llm = ChatOpenAI(
         openai_api_key=openai_api,
     )
 
-db = DatabaseManager()
 
-
-class UserInformation(BaseModel):
-    user_name: Annotated[Optional[str], Field(description="Personal name of the user")]
-    phone_number: Annotated[Optional[str], Field(description="User's phone number")]
-    year_of_birth: Annotated[Optional[int], Field(description="User's year of birth")]
-    address: Annotated[Optional[str], Field(description="User's address (city, province, or full address)")]
-    major: Annotated[Optional[str], Field(description="User's field of study or academic major")]
-    additional_info: Annotated[Optional[str], Field(description="Any other relevant details about the user")]
+# class UserInformation(BaseModel):
+#     user_name: Annotated[Optional[str], Field(description="Personal name of the user")]
+#     phone_number: Annotated[Optional[str], Field(description="User's phone number")]
+#     year_of_birth: Annotated[Optional[int], Field(description="User's year of birth")]
+#     address: Annotated[Optional[str], Field(description="User's address (city, province, or full address)")]
+#     major: Annotated[Optional[str], Field(description="User's field of study or academic major")]
+#     additional_info: Annotated[Optional[str], Field(description="Any other relevant details about the user")]
 
 class UserInfoState(TypedDict):
     user_input: str
@@ -137,7 +133,7 @@ def validate_node(state: UserInfoState) -> dict:
             if not isinstance(extracted_info["year_of_birth"], int) or \
                extracted_info["year_of_birth"] < 1900 or \
                extracted_info["year_of_birth"] > current_year:
-                return {"error": "Year of birth must be a valid year between 1900 and the current year."}
+                return {"error": "Year of birth must be a valid year between 1900 and the current year."}   
         
         print("✅ User information is valid.")
         return {"validated_info": extracted_info}
@@ -154,7 +150,7 @@ def save_node(state: UserInfoState) -> dict:
         if state.get("error") or not validated_info:
             return {"save_result": "❌No valid user information to save."}
         
-        success = db.update_user_profile(validated_info)
+        success = update_user_profile(validated_info)
         if success:
             result_msg = f"User information saved successfully: {json.dumps(validated_info, indent=2, ensure_ascii=False)}"
             return {"save_result": result_msg}
@@ -248,7 +244,7 @@ user_info_agent = create_user_info_agent()
 
 def save_user_information(user_input: str) -> str:
     try:
-        current_profile = db.get_user_profile() or {}
+        current_profile = get_user_profile() or {}
         
         # Run the agent
         result = user_info_agent.invoke({
@@ -269,21 +265,21 @@ def save_user_information(user_input: str) -> str:
         print(f"❌ Error in user information agent: {e}")
         return {"error": "Failed to process user information: " + str(e)}
 
-if __name__ == "__main__":
-    print("🚀 Testing User Information Agent")
-    print("=" * 50)
+# if __name__ == "__main__":
+#     print("🚀 Testing User Information Agent")
+#     print("=" * 50)
     
-    # Test input
-    user_input_example = "my name is Pham Van Nam, i was born in 2003, now i'm a student in DaNang and intern at HBG company"
+#     # Test input
+#     user_input_example = "my name is Pham Van Nam, i was born in 2003, now i'm a student in DaNang and intern at HBG company"
     
-    print(f"Input: {user_input_example}")
-    print("-" * 50)
+#     print(f"Input: {user_input_example}")
+#     print("-" * 50)
     
-    # Test the agent
-    result = save_user_information(user_input_example)
-    print("Agent Result:")
-    print(result)
+#     # Test the agent
+#     result = save_user_information(user_input_example)
+#     print("Agent Result:")
+#     print(result)
     
-    print("-" * 50)
-    print("Current Profile:")
-    print(format_user_profile())
+#     print("-" * 50)
+#     print("Current Profile:")
+#     print(format_user_profile())

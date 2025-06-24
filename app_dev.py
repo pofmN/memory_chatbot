@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from database.storage import DatabaseManager
+from core.base.storage import DatabaseManager
 from ui.ui_components import (
     initialize_session_state, 
     render_sidebar, 
@@ -12,11 +12,11 @@ from ui.ui_components import (
     render_footer, 
     render_database_status
 )
-from core import (
+from core.base.mcp_client import (
     initialize_session, 
-    initialize_messages, 
-    setup_graph
+    initialize_messages
 )
+from core.base.setup_graph import setup_graph
 
 # Load environment variables
 load_dotenv()

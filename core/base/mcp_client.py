@@ -22,7 +22,7 @@ class MCPClient():
             command="python",
             args=[server_path]
         )
-        
+
     async def get_history_summary(self, session_id: str) -> str:
         """Retrieve the summary of a chat session by its ID."""
         try:
@@ -69,7 +69,7 @@ class MCPClient():
 
 def init_mcp_client() -> MCPClient:
     """Initialize MCP client"""
-    MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp_server/mcp_server.py"
+    MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
     return MCPClient(MCP_SERVER_PATH)
 
 def mcp_history_tool(session_id: str, mcp_client: MCPClient) -> str:
@@ -88,6 +88,29 @@ def update_user_information(user_input: str, mcp_client: MCPClient) -> str:
     except Exception as e:
         return f"Error updating user information: {str(e)}"
 
+def initialize_session(db):
+    """Initialize single persistent session"""
+    if "single_session_id" not in st.session_state:
+        sessions = db.get_all_sessions()
+        if sessions:
+            st.session_state.single_session_id = sessions[0]['session_id']
+            history = db.get_chat_history(st.session_state.single_session_id)
+            st.session_state.messages = [
+                {"role": msg['role'], "content": msg['content']} 
+                for msg in history
+            ]
+        else:
+            new_session_id = str(uuid.uuid4())
+            if db.create_session(new_session_id):
+                st.session_state.single_session_id = new_session_id
+                st.session_state.messages = []
+
+def initialize_messages():
+    """Initialize messages in session state"""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+## Converted to another file
 def setup_tools(mcp_client: MCPClient) -> list:
     """Setup and return all tools"""
     search_tool = TavilySearch(max_results=3)
@@ -240,25 +263,3 @@ def setup_graph(db, llm):
     graph_builder.add_edge("tools", "chatbot")
     
     return graph_builder.compile()
-
-def initialize_session(db):
-    """Initialize single persistent session"""
-    if "single_session_id" not in st.session_state:
-        sessions = db.get_all_sessions()
-        if sessions:
-            st.session_state.single_session_id = sessions[0]['session_id']
-            history = db.get_chat_history(st.session_state.single_session_id)
-            st.session_state.messages = [
-                {"role": msg['role'], "content": msg['content']} 
-                for msg in history
-            ]
-        else:
-            new_session_id = str(uuid.uuid4())
-            if db.create_session(new_session_id):
-                st.session_state.single_session_id = new_session_id
-                st.session_state.messages = []
-
-def initialize_messages():
-    """Initialize messages in session state"""
-    if "messages" not in st.session_state:
-        st.session_state.messages = []

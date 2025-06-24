@@ -1,3 +1,4 @@
+sqlalchemy
 streamlit
 fastmcp
 tavily-python

@@ -1,14 +1,11 @@
 import streamlit as st
 from dotenv import load_dotenv
-from typing_extensions import TypedDict
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 import asyncio
-import json
 import os
-from database.storage import DatabaseManager
+from core.base.storage import DatabaseManager
 from langchain_openai import ChatOpenAI
-from extract_user_info import save_user_information
 import uuid
 # Load environment variables
 load_dotenv()
@@ -59,7 +56,7 @@ class MCPClient():
         except Exception as e:
             return f"Error updating user information: {str(e)}"
         
-MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp_server/mcp_server.py"
+MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
 mcp_client = MCPClient(MCP_SERVER_PATH)
 
 

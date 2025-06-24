@@ -29,7 +29,7 @@ def generate_custom_system_prompt(personality: str, style: str, length: str, lan
         "Mixed (English + Vietnamese)": "You can use both English and Vietnamese as appropriate. Switch languages naturally based on context.",
         "Auto-detect": "Detect the user's language preference and respond accordingly."
     }
-    
+
     prompt = f"""{personality}
 
 COMMUNICATION GUIDELINES:
@@ -75,7 +75,7 @@ def initialize_session_state():
                 "personality": "Friendly Assistant",
                 "style": "Conversational",
                 "length": "Balanced",
-                "language": "Vietnamese",
+                "language": "Auto-detect",
                 "instructions": "khi trả lời tôi phải gọi tôi là hoàng thượng đi kèm với kính thưa hoàng đế."
             }
         }
@@ -236,7 +236,7 @@ def render_sidebar():
             st.session_state.personality_prompt = personality_presets["Friendly Assistant"]
             st.session_state.communication_style = "Conversational"
             st.session_state.response_length = "Balanced"
-            st.session_state.language_pref = "Vietnamese"
+            st.session_state.language_pref = "Auto-detect"
             st.session_state.special_instructions = ""
             st.session_state.custom_personality = ""
             st.rerun()

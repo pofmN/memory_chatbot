@@ -1,15 +1,14 @@
 import os
-import uvicorn
 from fastmcp import FastMCP
 from tavily import TavilyClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from database.storage import DatabaseManager
-from database.storage import DatabaseManager
+from core.base.storage import DatabaseManager
+from core.base.storage import DatabaseManager
 from typing import Optional, List
-from extract_user_info import save_user_information
+from agent.extract_user_info_agent.agent import save_user_information
 import json
 
 load_dotenv()
