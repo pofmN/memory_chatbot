@@ -6,9 +6,9 @@ from psycopg2.extras import RealDictCursor
 
 db = DatabaseManager()
 
-def get_user_profile(self) -> Optional[dict]:
+def get_user_profile() -> Optional[dict]:
         """Get the single user profile"""
-        conn = self.get_connection()
+        conn = db.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -22,9 +22,9 @@ def get_user_profile(self) -> Optional[dict]:
                 conn.close()
         return None
 
-def update_user_profile(self, profile_data: dict) -> bool:
+def update_user_profile(profile_data: dict) -> bool:
         """Update user profile, keeping existing values for fields not provided"""
-        conn = self.get_connection()
+        conn = db.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:

@@ -692,8 +692,8 @@ if __name__ == "__main__":
             print("✅ Profile updated successfully")
         
         # Get profile
-        profile = db.get_user_profile()
-        print(f"📝 Current profile: {profile}")
+        #profile = db.get_user_profile()
+        #print(f"📝 Current profile: {profile}")
         
         # Test session and messaging
         session_id = db.create_session()

@@ -15,7 +15,7 @@ def setup_graph(db, llm):
     
     graph_builder = StateGraph(State)
     
-    chatbot_function = create_chatbot_function(db, llm_with_tools)
+    chatbot_function = create_chatbot_function(llm_with_tools)
     tool_node = ToolNode(tools=tools)
     
     graph_builder.add_node("chatbot", chatbot_function)

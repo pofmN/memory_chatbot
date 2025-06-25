@@ -1,7 +1,7 @@
 
 
-EXTRACT_USER_INFORMATION_PROMPT = """You are a data extraction assistant responsible for extracting structured information from user input to populate the `user_profile` table. The schema is:
-
+EXTRACT_USER_INFORMATION_PROMPT = """You are a data extraction assistant responsible for extracting structured information from user input to populate the `user_profile` table. 
+The schema is:
 - user_name (required): The full name of the user.
 - phone_number (optional): The user's phone number.
 - year_of_birth (optional): The user's year of birth.

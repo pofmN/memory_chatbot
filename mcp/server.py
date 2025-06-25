@@ -9,6 +9,7 @@ from core.base.storage import DatabaseManager
 from core.base.storage import DatabaseManager
 from typing import Optional, List
 from agent.extract_user_info_agent.agent import save_user_information
+from agent.extract_event_agent.agent import save_event_extraction_agent
 import json
 
 load_dotenv()
@@ -101,6 +102,26 @@ async def add_user_info(user_input: str) -> str:
         }
 
     return user_info
+
+@mcp.tool()
+async def add_event(user_input: str) -> str:
+    """
+    Add an event to the database.
+    
+    Args:
+        event_data (dict): A dictionary containing event details.
+        
+    Returns:
+        str: Confirmation message or error message.
+    """
+    try:
+        event_data = save_event_extraction_agent(user_input)
+        if event_data:
+            return event_data
+        else:
+            return "Failed to create event."
+    except Exception as e:
+        return f"Error creating event: {str(e)}"
 
 @mcp.tool()
 async def test_mcp_server() -> str:

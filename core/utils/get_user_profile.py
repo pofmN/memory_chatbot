@@ -1,11 +1,12 @@
 import streamlit as st
+from agent.extract_user_info_agent.services import get_user_profile
 from ui.ui_components import generate_custom_system_prompt, get_personality_presets
 
 
-def get_user_profile_context(db) -> str:
+def get_user_profile_context() -> str:
     """Retrieve user profile data and format it as context for the chatbot."""
     try:
-        user_profile = db.get_user_profile()
+        user_profile = get_user_profile()
         
         profile_context = ""
         if user_profile:

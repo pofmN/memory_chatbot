@@ -19,6 +19,16 @@ def update_user_information(user_input: str, mcp_client: MCPClient) -> str:
         return user_info
     except Exception as e:
         return f"Error updating user information: {str(e)}"
+    
+def add_event_information(user_input:str, mcp_client: MCPClient) -> str:
+    
+    """Add an event to the MCP server."""
+    try:
+        event_info = asyncio.run(mcp_client.add_event(user_input))
+        return event_info
+    except Exception as e:
+        return f"Error adding event: {str(e)}"
+    
 
 def setup_tools(mcp_client: MCPClient) -> list:
     """Setup and return all tools"""
@@ -67,5 +77,58 @@ def setup_tools(mcp_client: MCPClient) -> list:
             "required": ["user_input"]
         },
     )
+    extract_event_info_tool = StructuredTool.from_function(
+        func=lambda user_input: add_event_information(user_input, mcp_client),
+        name="add_event",
+        description="""Use this tool AUTOMATICALLY whenever the user mentions ANY event, appointment, meeting, reminder, or time-based activity in ANY language. 
+    SEMANTIC PATTERNS - Use this tool when user mentions:
+    - Time expressions: dates, hours, relative time (tomorrow, next week, in 2 hours, etc.)
+    - Person names + time: "with [name] at [time]"
+    - Location + time references
+    - Activities with scheduled times
+    - Future tense + time reference
+    - Obligation/reminder expressions
+    - Calendar-related activities
+    - Recurring activities with time patterns
 
-    return [search_tool, retrieve_tool, extract_user_info_tool]
+    UNIVERSAL INDICATORS (language-independent):
+    - Names of people + time expressions
+    - Numbers + time units (2pm, 3 hours, Monday, etc.)
+    - Location names + temporal context
+    - Action verbs + future time references
+    - Modal verbs expressing necessity/planning + time
+    - Question words about when/where + activities
+    - Dates in any format (DD/MM, MM/DD, YYYY-MM-DD)
+    - Times in any format (24h, 12h, relative)
+
+    CONTEXTUAL CLUES to detect events:
+    - Temporal expressions combined with activities
+    - Personal pronouns + future activities
+    - Proper nouns (names, places) + time context
+    - Numbers representing time/dates
+    - Expressions of obligation or planning
+    - Social/professional activity contexts
+
+    TABLE SCHEMA: events(event_id, event_name, start_time, end_time, location, description, priority)
+    - event_id: Unique identifier for the event (UUID)
+    - event_name: Required name of the event (VARCHAR 100)
+    - start_time: Optional start time of the event (DATETIME)
+    - end_time: Optional end time of the event (DATETIME)
+    - location: Optional location of the event (TEXT)
+    - description: Optional description of the event (TEXT)
+    - priority: Optional priority level (low, medium, high)
+    
+    ALWAYS use this tool when you detect temporal context combined with activities, regardless of the language used. Focus on semantic meaning rather than specific keywords.""",
+        args_schema={
+            "type": "object",
+            "properties": {
+                "user_input": {
+                    "type": "string",
+                    "description": "The complete user input containing event or time-based activity information in any language."
+                }
+            },
+            "required": ["user_input"]
+        },
+    )
+
+    return [search_tool, retrieve_tool, extract_user_info_tool, extract_event_info_tool]

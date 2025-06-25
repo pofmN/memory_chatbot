@@ -3,12 +3,12 @@ from core.base.schema import State
 from core.utils.get_user_profile import get_user_profile_context
 
 
-def create_chatbot_function(db, llm_with_tools):
+def create_chatbot_function(llm_with_tools):
     """Create chatbot function with dependencies"""
     def chatbot(state: State) -> dict:
         """Chatbot function that uses session state values"""
         
-        user_info = get_user_profile_context(db)
+        user_info = get_user_profile_context()
         messages = state["messages"].copy()
         
         # Create system message with custom prompt and user profile
