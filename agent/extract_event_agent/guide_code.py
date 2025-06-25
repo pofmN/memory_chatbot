@@ -150,7 +150,7 @@ Extract all event information following the rules above. If multiple events are 
                 if event.get('priority'):
                     valid_priorities = ['high', 'medium', 'low']
                     if event['priority'].lower() not in valid_priorities:
-                        event['priority'] = 'medium'  # Default fallback
+                        event['priority'] = 'medium'
                 
                 # If no critical errors, add to validated events
                 if not validation_errors:

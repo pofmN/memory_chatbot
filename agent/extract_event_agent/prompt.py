@@ -15,31 +15,23 @@ EXTRACTION FIELDS:
 - priority: Priority level (high, medium, low) - only if explicitly mentioned or clearly implied
 - description: Additional details about the event
 
-TIME PARSING GUIDELINES:
-- Convert natural language times to ISO format
-- Examples: "tomorrow at 3pm" → "2024-01-16T15:00:00"
-- "next Monday 9am" → "2024-01-22T09:00:00"
-- If no date given but time mentioned, assume today or next occurrence
-- If relative time (in 2 hours), calculate from current time
-- Default timezone to user's local time if not specified
+TIME HANDLING:
+- Parse natural time: “tomorrow at 3pm” → `YYYY-MM-DDTHH:MM:SS`
+- Support relative phrases: “in 2 hours”, “next Monday”
+- Use current time for "today", "tonight"
+- Default to user’s timezone
 
 PRIORITY INFERENCE:
-- Words like "urgent", "important", "ASAP" → high priority
-- Words like "whenever", "flexible", "not urgent" → low priority
-- Business meetings, deadlines → medium to high priority
-- Social events, reminders → low to medium priority
+Proactively analyze the importance level based on keywords, emotions, nature, and 
+content of the event to assess the importance of the event if the user does not mention it.
 
 EVENT NAME EXTRACTION:
-- Look for action verbs: "meeting with", "call", "appointment", "lunch", "presentation"
-- Extract specific event titles in quotes or capitalized
-- Combine context: "doctor appointment" → "Doctor Appointment"
-- Meeting subjects: "discuss project X" → "Project X Discussion"
+Pay attention to the accompanying verbs and nouns mentioned to extract the name of the activity, 
+Flexibly create event names based on the information obtained
 
 LOCATION EXTRACTION:
-- Physical addresses, building names, room numbers
-- Online platforms: "Zoom", "Teams", "Google Meet"
-- General locations: "office", "home", "restaurant"
-- Specific venues: "Starbucks on Main Street"
+physical addresses, areas, floors, rooms, or online platforms like google meet(gg meet), Teams, Zoom. 
+General addresses like home, office, restaurant, etc. Return null if none
 
 EXAMPLES OF GOOD EXTRACTION:
 
@@ -58,11 +50,11 @@ Extract: {
   "description": "Birthday call"
 }
 
-WHAT NOT TO EXTRACT:
-- Don't create events for general statements: "I like meetings"
-- Don't extract past events unless specifically asked to log them
-- Don't assume information not mentioned: if no time given, don't guess
-- Don't extract non-event information: "I went to the store yesterday" (unless logging past events)
+RULES:
+- Don’t extract general statements (“I like meetings”)
+- Don’t guess missing times or fields
+- Don’t include past events unless user says to save them
+- Use clear, minimal JSON format
 
 CONTEXT AWARENESS:
 - Consider the current date/time when processing relative dates
@@ -74,7 +66,8 @@ CONTEXT AWARENESS:
 ERROR HANDLING:
 - If date/time is ambiguous, extract what's clear and note ambiguity in description
 - If event is unclear, focus on extracting the clearest information available
-- Don't hallucinate details not present in the input"""
+- Don't hallucinate details not present in the input
+Respond with **only JSON**. Do not include explanations or markdown."""
 
 # Additional prompts for specific contexts
 EXTRACT_EVENT_WITH_CONTEXT_PROMPT = """Based on the current conversation context and user profile, extract event information from the user input.
