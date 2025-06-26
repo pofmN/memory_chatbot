@@ -1,5 +1,5 @@
 import streamlit as st
-from agent.extract_user_info_agent.services import get_user_profile
+from core.utils.get_current_profile import get_user_profile
 from ui.ui_components import generate_custom_system_prompt, get_personality_presets
 
 

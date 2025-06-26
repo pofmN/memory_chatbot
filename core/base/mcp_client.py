@@ -5,15 +5,15 @@ import uuid
 from typing import Dict, Any
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from langchain_tavily import TavilySearch
-from langchain.tools import StructuredTool
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
-from typing import Annotated
-from agent.extract_user_info_agent.services import get_user_profile
-from typing_extensions import TypedDict
-from ui.ui_components import generate_custom_system_prompt, get_personality_presets
+# from langchain_tavily import TavilySearch
+# from langchain.tools import StructuredTool
+# from langgraph.graph import StateGraph, START, END
+# from langgraph.graph.message import add_messages
+# from langgraph.prebuilt import ToolNode, tools_condition
+# from typing import Annotated
+# from core.utils.get_current_profile import get_user_profile
+# from typing_extensions import TypedDict
+# from ui.ui_components import generate_custom_system_prompt, get_personality_presets
 import streamlit as st
 
 class MCPClient():

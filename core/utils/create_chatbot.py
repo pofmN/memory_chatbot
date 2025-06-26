@@ -1,6 +1,6 @@
 import streamlit as st
 from core.base.schema import State
-from core.utils.get_user_profile import get_user_profile_context
+from core.utils.get_user_profile_context import get_user_profile_context
 
 
 def create_chatbot_function(llm_with_tools):

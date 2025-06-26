@@ -6,9 +6,10 @@ import os
 import json
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from agent.extract_user_info_agent.services import get_user_profile, update_user_profile
+from agent.extract_user_info.services import update_user_profile
+from core.utils.get_current_profile import get_user_profile
 from core.base.schema import UserInformation
-from agent.extract_user_info_agent.prompt import EXTRACT_USER_INFORMATION_PROMPT
+from agent.extract_user_info.prompt import EXTRACT_USER_INFORMATION_PROMPT
 
 class UserInfoState(TypedDict):
     """State for user information extraction"""

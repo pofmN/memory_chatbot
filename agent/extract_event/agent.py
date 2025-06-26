@@ -1,19 +1,23 @@
 import sys
 import os
+import streamlit as st
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from core.base.schema import EventInformation
-# from extract_user_info_agent.services import get_user_profile
-from agent.extract_event_agent.services import create_event, get_all_events, get_upcoming_events
+from core.utils.get_current_profile import get_user_profile
+from tools.retrieve_history import retrieval_tool
+session_id = st.session_state.get('single_session_id')
+from services import create_event, get_all_events, get_upcoming_events, find_similar_events
 from langgraph.graph import StateGraph, START, END
 from datetime import datetime
 from typing import List, Optional, Literal
 from typing_extensions import TypedDict
 import dotenv
 from langchain_openai import ChatOpenAI
-from agent.extract_event_agent.prompt import EXTRACT_EVENT_SYSTEM_PROMPT
+from prompt import EXTRACT_EVENT_SYSTEM_PROMPT
 
 dotenv.load_dotenv()
 
+openai_api = os.environ.get("OPENAI_API_KEY")
 class EventState(TypedDict):
     """State for the event extraction agent."""
     user_input: str
@@ -28,8 +32,6 @@ class EventState(TypedDict):
 class EventExtractionAgent:
     def __init__(self, llm: ChatOpenAI = None):
         if llm is None:
-            openai_api = os.environ.get("OPENAI_API_KEY")
-
             self.llm = ChatOpenAI(
                 model_name="gpt-4o-mini",
                 temperature=0.1,
@@ -54,6 +56,7 @@ class EventExtractionAgent:
             prompt = f"""{system_prompt}
 Based on the current conversation context and user profile, extract event information from the user input.
 Current date/time: {current_datetime}
+Current events: {get_all_events()}
 User timezone: {user_timezone}
 
 Previous conversation context: {current_context}
@@ -69,7 +72,7 @@ Use the context to better understand relative time references and implicit infor
             else:
                 extracted_events = [response.model_dump()]
             
-            filtered_events = []  # Fixed: initialize as list, not dict
+            filtered_events = []
             for event in extracted_events:
                 filtered_event = {
                     k: v for k, v in event.items() 
@@ -79,13 +82,13 @@ Use the context to better understand relative time references and implicit infor
                     filtered_events.append(filtered_event)
             
             print(f"🔍 Extracted {len(filtered_events)} events from input")
-            return {"extracted_events": filtered_events}  # Fixed: return dict
+            return {"extracted_events": filtered_events}
             
         except Exception as e:
             print(f"❌ Error extracting events: {e}")
-            return {"error": f"Error extracting events: {str(e)}"}  # Fixed: return dict
+            return {"error": f"Error extracting events: {str(e)}"}
 
-    def _validate_node(self, state: EventState) -> dict:  # Fixed: return dict
+    def _validate_node(self, state: EventState) -> dict:
         try:
             extracted_events = state.get("extracted_events", [])
             if not extracted_events:
@@ -102,20 +105,19 @@ Use the context to better understand relative time references and implicit infor
                 
                 if event.get("start_time"):
                     try:
-                        start_time = self._parse_datetime(event.get("start_time"))  # Fixed: use .get() not .get[]
-                        event["start_time"] = start_time.isoformat()  # Fixed: use [] not get[]
+                        start_time = self._parse_datetime(event.get("start_time"))
+                        event["start_time"] = start_time.isoformat()
                         
-                        if start_time.isoformat() < current_datetime:  # Fixed: compare properly
-                            event["warning"] = "Start time is in the past."  # Fixed: use [] not get[]
+                        if start_time.isoformat() < current_datetime:
+                            event["warning"] = "Start time is in the past."
                     except ValueError as ve:
                         validation_errors.append(f"Invalid start time: {str(ve)}")
                     
                 if event.get("end_time"):
                     try:
-                        end_time = self._parse_datetime(event.get("end_time"))  # Fixed: use .get() not .get[]
-                        event["end_time"] = end_time.isoformat()  # Fixed: use [] not get[]
+                        end_time = self._parse_datetime(event.get("end_time"))
+                        event["end_time"] = end_time.isoformat()
                         
-                        # Fixed: need to get start_time first
                         if event.get("start_time"):
                             start_time = self._parse_datetime(event.get("start_time"))
                             if end_time < start_time:
@@ -143,7 +145,7 @@ Use the context to better understand relative time references and implicit infor
             print(f"❌ Error validating events: {e}")
             return {"error": f"Error validating events: {str(e)}"}
         
-    def _save_node(self, state: EventState) -> dict:  # Fixed: return dict
+    def _save_node(self, state: EventState) -> dict:
         """Save validated events to the database."""
         try:
             validated_events = state.get("validated_events", [])
@@ -154,17 +156,19 @@ Use the context to better understand relative time references and implicit infor
             saved_result = []
             
             for event in validated_events:
+                # Ensure description is never None
+                description = event.get("description")
+                if not description:
+                    description = event.get("event_name", "Event description not provided")
+                
                 event_data = {
                     "event_name": event.get("event_name"),
                     "start_time": self._parse_datetime(event.get("start_time")) if event.get("start_time") else None,
                     "end_time": self._parse_datetime(event.get("end_time")) if event.get("end_time") else None,
                     "location": event.get("location"),
-                    "description": event.get("description"),
+                    "description": description,  # Use the non-None description
                     "priority": event.get("priority", "medium"),
                 }
-                
-                if event.get("description"):
-                    event_data["description"] = event["description"].strip()
                 
                 event_id = create_event(event_data)
                 if event_id:
@@ -173,21 +177,32 @@ Use the context to better understand relative time references and implicit infor
                     print(f"✅ Event '{event_data['event_name']}' saved with ID {event_id}")
                 else:
                     print(f"❌ Failed to save event '{event_data['event_name']}'")
+            
             if not saved_result:
                 result_message = "No events were saved."
                 print("❌ No events saved")
             else:
-                event_names = [event.get("event_name", "Unnamed Event") for event in saved_result]
-                event_times = [f"{event.get('start_time', 'Unknown') or 'Unknown'} - {event.get('end_time', 'Unknown') or 'Unknown'}" for event in saved_result]
-                event_locations = [event.get("location") or "No location" for event in saved_result]
-                result_message = f"Saved {save_count} events successfully! Events:\n" + "\n".join(event_names) + "\nTimes: " + ", ".join(event_times) + "\nLocations: " + ", ".join(event_locations)
+                # Ensure all elements are strings
+                event_names = [str(event.get("event_name", "Unnamed Event")) for event in saved_result]
+                event_times = [
+                    f"{str(event.get('start_time', 'Unknown'))} - {str(event.get('end_time', 'Unknown'))}"
+                    for event in saved_result
+                ]
+                event_locations = [str(event.get("location", "No location")) for event in saved_result]
+                
+                result_message = (
+                    f"Saved {save_count} events successfully! Events:\n" +
+                    "\n".join(event_names) +
+                    "\nTimes: " + ", ".join(event_times) +
+                    "\nLocations: " + ", ".join(event_locations)
+                )
                 print(f"💾 Saved {len(saved_result)} events successfully")
-            return {"saved_result": result_message}
             
+            return {"saved_result": result_message}
+        
         except Exception as e:
             print(f"❌ Error saving events: {e}")
             return {"error": f"Error saving events: {str(e)}"}
-    
     def _should_continue(self, state: EventState) -> Literal["validate", "end"]:
         """Determine if should continue to validation"""
         return "end" if state.get("error") or not state.get("extracted_events") else "validate"
@@ -248,11 +263,12 @@ Use the context to better understand relative time references and implicit infor
         """Process user input and extract events"""
         try:
             current_datetime = datetime.now().isoformat()
-            current_profile = ""
+            #current_profile = get_user_profile()
+            current_context = retrieval_tool(session_id) if session_id else ""
             
             result = self.graph.invoke({
                 "user_input": user_input,
-                "current_context": current_profile or {},
+                "current_context": current_context or {},
                 "extracted_events": [],
                 "validated_events": [],
                 "saved_result": "",
@@ -287,22 +303,21 @@ def save_event_extraction_agent(user_input: str) -> Optional[str]:
     else:
         print(f"✅ Event extraction agent saved successfully!{result}")
         return result
-
-# Test function
-# if __name__ == "__main__":
-#     agent = create_event_extraction_agent()
     
-#     # Test cases
-#     test_inputs = [
-#         "I have a meeting with John tomorrow at 2 PM in conference room A",
-#         "Remind me to call mom at 7pm tonight, it's her birthday and very important",
-#         "Lunch with Sarah next Tuesday at noon, somewhere downtown",
-#     ]
-    
-#     for test_input in test_inputs:
-#         print(f"\n🧪 Testing: {test_input}")
-#         result = agent.process(test_input)
-#         print(f"📝 Result: {result}")
 
-# test_input = "Hôm nay là sinh nhật của mẹ tôi, tôi cần phải có mặt ở nhà trước 8pm"
-# save_event_extraction_agent(test_input)
+# text_input = "I have a meeting with John next week at 3 PM in the office"
+# agent = save_event_extraction_agent(text_input)
+# print("Event Extraction Result:", agent)
+
+text_input = "i wanna change meeting with John to 5 PM next week in the office"
+result = find_similar_events(text_input)
+print("Similar Events Found:", result[0].get("event_id"))
+
+# openai_api = os.environ.get("OPENAI_API_KEY")
+# llm = ChatOpenAI(
+#         model_name="gpt-4o-mini",
+#         temperature=0.2,
+#         max_tokens=1000,
+#         base_url="https://warranty-api-dev.picontechnology.com:8443",
+#         openai_api_key=openai_api,
+#     )

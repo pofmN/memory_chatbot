@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Make sure MCP server is executable
-RUN chmod +x mcp_server/mcp_server.py
+RUN chmod +x mcp/server.py
 
 # Create .env file with Docker-specific settings
 RUN echo "DB_HOST=postgres" > .env && \

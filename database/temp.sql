@@ -1,0 +1,2 @@
+ALTER TABLE event ADD COLUMN embedding vector(1536);
+CREATE EXTENSION IF NOT EXISTS vector;

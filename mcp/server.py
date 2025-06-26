@@ -8,8 +8,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base.storage import DatabaseManager
 from core.base.storage import DatabaseManager
 from typing import Optional, List
-from agent.extract_user_info_agent.agent import save_user_information
-from agent.extract_event_agent.agent import save_event_extraction_agent
+from agent.extract_user_info.agent import save_user_information
+from agent.extract_event.agent import save_event_extraction_agent
 import json
 
 load_dotenv()
