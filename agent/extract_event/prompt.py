@@ -69,38 +69,44 @@ ERROR HANDLING:
 - Don't hallucinate details not present in the input
 Respond with **only JSON**. Do not include explanations or markdown."""
 
-# Additional prompts for specific contexts
-EXTRACT_EVENT_WITH_CONTEXT_PROMPT = """Based on the current conversation context and user profile, extract event information from the user input.
+INTENT_DETECTION_PROMPT = """
+You are an intelligent assistant that analyzes user input to determine their intent regarding event management.
 
-Current date/time: {current_datetime}
-User timezone: {user_timezone}
-User profile context: {user_context}
+Analyze the user input and determine if they want to:
 
-Previous conversation context: {conversation_context}
+CREATE - Create a new event/appointment/meeting
+UPDATE - Modify/change/reschedule an existing event
+SEARCH - Find/look for existing events
+DELETE - Cancel/remove an existing event
+Consider these keywords for different languages:
 
-User input: {user_input}
+English CREATE keywords: schedule, book, plan, arrange, set up, create, add, make appointment, new event, organize
+Vietnamese CREATE keywords: đặt lịch, tạo, thêm, sắp xếp, hẹn, lên lịch, tổ chức, sự kiện mới
 
-Use the context to better understand relative time references and implicit information."""
+English UPDATE keywords: change, modify, update, reschedule, move, shift, postpone, cancel, edit, adjust
+Vietnamese UPDATE keywords: thay đổi, sửa, chỉnh sửa, đổi, chuyển, dời, hủy, hoãn, cập nhật, điều chỉnh
 
-EXTRACT_RECURRING_EVENT_PROMPT = """This user input may contain information about recurring events. Look for patterns like:
-- "every Monday", "weekly", "daily", "monthly"
-- "twice a week", "every other day"
-- "every weekday", "weekends only"
+English SEARCH keywords: find, search, show, list, what, when, check, look for, view, see
+Vietnamese SEARCH keywords: tìm, tìm kiếm, xem, kiểm tra, danh sách, xem lịch, hiện, nhìn
 
-If you detect a recurring pattern, include it in the description field with format:
-"Recurring: [pattern description]"
+English DELETE keywords: cancel, delete, remove, drop
+Vietnamese DELETE keywords: hủy, xóa, bỏ
 
-Example: "Team standup every Monday at 9am"
-Should extract with description: "Recurring: Every Monday"
+Use a scoring system: assign 2 points for keywords at the start of the sentence, 
+1 point for keywords elsewhere, and add 1 point for context clues (e.g., "event", "meeting", "appointment", "lịch", "hẹn") combined with intent-specific keywords. 
+Prioritize the intent with the highest score, defaulting to "UNKNOWN" if no intent is clear.
 """
 
-EXTRACT_MULTIPLE_EVENTS_PROMPT = """The user input may contain multiple events. Extract each event separately and return as a list.
-
-Look for separators like:
-- "and then", "after that", "followed by"
-- "also", "plus", "in addition"
-- Multiple time references
-- Lists with bullets or numbers
-
-Example: "Meeting at 2pm, then lunch at 4pm, and call with client at 6pm"
-Should extract 3 separate events."""
+UPDATE_EVENT_PROMPT = """
+Based on the current information of the events, modify the events according to the user's input. 
+I will provide the most relevant events type json extracted from the database
+.Then combine the existing data and the user input data to return the new data 
+,prioritize the user input information to update the existing information and return according to 
+EXTRACTION FIELDS:
+- event_name: Name or title of the event (required if event is mentioned)
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SS)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SS) - only if explicitly mentioned or can be reasonably inferred
+- location: Where the event takes place (physical address, online platform, room name, etc.)
+- priority: Priority level (high, medium, low) - only if explicitly mentioned or clearly implied
+- description: Additional details about the event
+"""

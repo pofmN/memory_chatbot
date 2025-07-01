@@ -31,7 +31,7 @@ def create_event(event_data: dict) -> Optional[int]:
                     event_data.get('location'),
                     event_data.get('priority', 'normal'),
                     event_data.get('description', ''),
-                    embedding_vector  # Pass as vector string
+                    embedding_vector
                 ))
                 event_id = cur.fetchone()[0]
                 conn.commit()
@@ -44,7 +44,42 @@ def create_event(event_data: dict) -> Optional[int]:
             conn.close()
     return None
 
-def find_similar_events(query_text: str, limit: int = 2) -> List[dict]:
+def modify_event(event_id: int, event_data: dict) -> bool:
+    """Modify an existing event"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            register_vector(conn)
+            
+            embedding_list = get_embedding(event_data.get('description', ''))
+            embedding_vector = '[' + ','.join(map(str, embedding_list)) + ']'
+            
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE event 
+                    SET event_name = %s, start_time = %s, end_time = %s, location = %s, priority = %s, description = %s, embedding = %s::vector
+                    WHERE event_id = %s
+                """, (
+                    event_data.get('event_name'),
+                    event_data.get('start_time'),
+                    event_data.get('end_time'),
+                    event_data.get('location'),
+                    event_data.get('priority', 'normal'),
+                    event_data.get('description', ''),
+                    embedding_vector,
+                    event_id
+                ))
+                conn.commit()
+                return event_data.get('event_name') is not None and cur.rowcount > 0
+        except psycopg2.Error as e:
+            print(f"Error modifying event: {e}")
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+    return False
+
+def find_similar_events(query_text: str, limit: int = 1) -> List[dict]:
     """Find events similar to query text using cosine similarity"""
     conn = db.get_connection()
     if conn:

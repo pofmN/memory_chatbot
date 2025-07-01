@@ -208,7 +208,7 @@ Comprehensive Summary:"""
                         cur.execute("""
                             INSERT INTO chat_summaries (session_id, summarize, last_update)
                             VALUES (%s, %s, CURRENT_TIMESTAMP)
-                        """, (session_id, comprehensive_summary))
+                            """, (session_id, comprehensive_summary))
                         
                         conn.commit()
                         
@@ -230,24 +230,26 @@ Comprehensive Summary:"""
                 conn.close()
         return None
 
-    def get_session_summary(self, session_id: str) -> Optional[dict]:
-        """Get the summary of a chat session"""
+    def get_session_summary(self, session_id: str) -> List[str]:
+        """Get the summary of a chat session as a list of summary strings"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
-                        SELECT * FROM chat_summaries 
+                        SELECT summarize FROM chat_summaries 
                         WHERE session_id = %s
+                        ORDER BY last_update ASC
                     """, (session_id,))
-                    result = cur.fetchone()
-                    return dict(result) if result else None
+                    results = cur.fetchall()
+                    # Return list of summary strings
+                    return [row['summarize'] for row in results] if results else []
             except psycopg2.Error as e:
                 print(f"Error retrieving session summary: {e}")
-                return None
+                return []
             finally:
                 conn.close()
-        return None
+        return []
 
     def force_summarize_session(self, session_id: str) -> Optional[str]:
         """Force summarization regardless of message count"""

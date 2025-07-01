@@ -79,28 +79,39 @@ CREATE TABLE activities (
     tags TEXT[] DEFAULT ARRAY[]::TEXT[]
 );
 
+-- Create activities_analysis table
+CREATE TABLE activities_analysis (
+    id SERIAL PRIMARY PRIMARY_KEY,
+    activity_type VARCHAR(100) NOT NULL,  -- e.g., "jogging", "meeting"
+    preferred_time VARCHAR(20),          -- e.g., "morning", "evening"
+    daily_pattern JSONB,                 -- e.g., {"morning": 3, "evening": 5} for counts
+    frequency_per_week INTEGER DEFAULT 0,
+    frequency_per_month INTEGER DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_activities_analysis_activity_type ON activities_analysis(activity_type);
+
 -- Create alert table
 CREATE TABLE alert (
     alert_id SERIAL PRIMARY KEY,
-    alert_type VARCHAR(50),
-    title VARCHAR(100),
-    message TEXT,
-    trigger_time TIMESTAMP,
-    priority VARCHAR(20),
-    status VARCHAR(20),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    activity_analysis_id INTEGER,
+    event_id INTEGER,
+    alert_type VARCHAR(50) NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    trigger_time TIMESTAMP NOT NULL,
+    recurrence VARCHAR(50),
+    priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed', 'cancelled')),
+    source VARCHAR(50) NOT NULL DEFAULT 'llm',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (activity_analysis_id) REFERENCES activities_analysis(id) ON DELETE SET NULL,
+    FOREIGN KEY (event_id) REFERENCES event(event_id) ON DELETE SET NULL
 );
 
--- Create activities_analysis table
-CREATE TABLE activities_analysis (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    start_at TIMESTAMP,
-    end_at TIMESTAMP,
-    frequency_per_week INTEGER,
-    frequency_per_month INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+CREATE INDEX idx_alert_trigger_time ON alert(trigger_time);
+
 
 -- Create indexes for performance
 CREATE INDEX idx_chat_sessions_start_time ON chat_sessions(start_time);

@@ -75,12 +75,12 @@ class MCPClient():
                 async with stdio_client(self.server_params) as (read, write):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
-                        
+                        print("session initialized")
                         result = await session.call_tool(
                             "add_event",
                             arguments={"user_input": user_input}
                         )
-                        
+                        print("result:", result)
                         if hasattr(result, 'content') and result.content:
                             content = result.content[0] if isinstance(result.content, list) else result.content
                             return content.text if hasattr(content, 'text') else str(content)

@@ -55,7 +55,7 @@ def setup_tools(mcp_client: MCPClient) -> list:
     extract_user_info_tool = StructuredTool.from_function(
         func=lambda user_input: update_user_information(user_input, mcp_client),
         name="extract_user_info",
-        description="""Use this tool to extract user information from the input string, even lack of field. 
+        description="""Use this tool to extract user information from the input string, even lack of field.
         Here is table schema: user_profile(id, user_name, phone_number, year_of_birth, address, major, additional_info, created_at, updated_at)
         
         - user_name: Required unique display name (VARCHAR 100)

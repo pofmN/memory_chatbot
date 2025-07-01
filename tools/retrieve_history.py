@@ -10,11 +10,13 @@ def retrieval_tool(session_id: str) -> str:
         history = db.get_session_summary(session_id)
         formatted_history = ''
         if history:
-            for msg in history[-5:]:  # Get last 5 messages
-                summary = msg.get('summary', '')
-                formatted_history += f"Summary: {summary}\n\n"
+            # print(f"Retrieved chat history for session {session_id}: {history}")
+            # print("=" * 100)
+            formatted_history = "".join(f"{msg}" for msg in history)
             return formatted_history
         else:
             return f"No chat history found for session {session_id}."
+    else:
+        print("No session ID provided.")
     
     return "No chat history available."

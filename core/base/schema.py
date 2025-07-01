@@ -24,3 +24,20 @@ class EventInformation(BaseModel):
     location: Annotated[Optional[str], Field(description="Location of the event")]
     priority: Annotated[Optional[str], Field(description="Priority level of the event (e.g., high, medium, low)")]
     description: Annotated[Optional[str], Field(description="Description of the event")]
+
+class ActivitiesInformation(BaseModel):
+    activity_name: Annotated[Optional[str], Field(description="Name of the activity")]
+    start_at: Annotated[Optional[str], Field(description="Start time of the activity in ISO format")]
+    end_at: Annotated[Optional[str], Field(description="End time of the activity in ISO format")]
+    description: Annotated[Optional[str], Field(description="Description of the activity")]
+    tags: Annotated[Optional[list[str]], Field(description="Tags associated with the activity")]
+
+class AlertInformation(BaseModel):
+    alert_type: Annotated[Optional[str], Field(description="Type of the alert (e.g., reminder, notification)")]
+    title: Annotated[Optional[str], Field(description="Title of the alert")]
+    message: Annotated[Optional[str], Field(description="Message content of the alert")]
+    trigger_time: Annotated[Optional[str], Field(description="Time when the alert should be triggered in ISO format")]
+    recurrence: Annotated[Optional[str], Field(description="Recurrence pattern of the alert (e.g., daily, weekly)")]
+    priority: Annotated[Optional[str], Field(description="Priority level of the alert (e.g., high, medium, low)")]
+    status: Annotated[Optional[str], Field(description="Status of the alert (e.g., active, resolved)")] 
+    source: Annotated[Optional[str], Field(description="Source of the alert (e.g., user input, system generated, event, activity)")]
