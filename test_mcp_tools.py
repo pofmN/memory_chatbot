@@ -56,21 +56,57 @@ class MCPClient():
         except Exception as e:
             return f"Error updating user information: {str(e)}"
         
+    async def add_activity(self, user_input: str) -> str:
+        """
+        Add an activity to the MCP server.
+        
+        Args:
+            user_input (str): The user input containing activity details.
+        
+        Returns:
+            str: Confirmation message or error message.
+        """
+        try:
+            async with asyncio.timeout(15):
+                async with stdio_client(self.server_params) as (read, write):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        
+                        result = await session.call_tool(
+                            "add_activity",
+                            arguments={"user_input": user_input}
+                        )
+                        
+                        if hasattr(result, 'content') and result.content:
+                            content = result.content[0] if isinstance(result.content, list) else result.content
+                            return content.text if hasattr(content, 'text') else str(content)
+                        else:
+                            return "Activity added successfully."
+                            
+        except asyncio.TimeoutError:
+            return "MCP server request timed out"
+        except asyncio.CancelledError:
+            return "MCP operation was cancelled"
+        except Exception as e:
+            return f"Error adding activity: {str(e)}"
+        
 MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
 mcp_client = MCPClient(MCP_SERVER_PATH)
 
 
-def update_user_information(user_input: str):
+def add_activity_information(user_input: str) -> str:
     """
-    Update user information in the database.
+    Add an activity to the MCP server.
+    
+    Args:
+        user_input (str): The user input containing activity details.
+    
+    Returns:
+        str: Confirmation message or error message.
     """
-    try:
-        user_input = asyncio.run(mcp_client.add_user_info(user_input))
-        return user_input
-    except Exception as e:
-        return f"Error updating user information: {str(e)}"
+    return asyncio.run(mcp_client.add_activity(user_input))
 
 
-# user_input = "my name is Pham Van Nam, i was born in 2003, now i student in DaNang and intern in HBG company"
-# user_info = update_user_information(user_input)
-# print("User information updated:", user_info)
+user_input = "tôi sẽ vui chơi với gia đình vào 8h tối hằng ngày"
+user_activity_info = add_activity_information(user_input)
+print(f"User Activity Info: {user_activity_info}")

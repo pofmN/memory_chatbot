@@ -23,6 +23,9 @@ class DatabaseManager:
         """Get database connection"""
         try:
             conn = psycopg2.connect(**self.connection_params)
+            with conn.cursor() as cur:
+                cur.execute("SET timezone = 'Asia/Bangkok'")            
+            conn.commit()
             return conn
         except psycopg2.Error as e:
             print(f"Database connection error: {e}")

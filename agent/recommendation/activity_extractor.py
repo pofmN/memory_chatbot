@@ -69,14 +69,14 @@ class ActivityExtractor:
                 activity_data = {
                     "activity_name": activity.get("activity_name"),
                     "description": activity.get("description"),
-                    "start_at": self._parse_datetime(activity.get("start_at")) if activity.get("start_at") else None,
-                    "end_at": self._parse_datetime(activity.get("end_at")) if activity.get("end_at") else None,
+                    "start_at": self._parse_datetime(activity.get("start_at")),
+                    "end_at": self._parse_datetime(activity.get("end_at")),
                     "tags": activity.get("tags", [])
                 }
                 
-                # Store in database
                 activity_id = create_activity(activity_data)
                 
+                #print(f"📦 Storing activity: {activity_data}")
                 if activity_id:
                     activity_data["id"] = activity_id
                     stored_activities.append(activity_data)
@@ -91,35 +91,16 @@ class ActivityExtractor:
         """Parse datetime string"""
         if not datetime_str:
             return None
-        
         try:
-            # Try ISO format first
-            return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
-        except:
-            try:
-                # Try common formats
-                formats = [
-                    "%Y-%m-%d %H:%M:%S",
-                    "%Y-%m-%d %H:%M",
-                    "%Y-%m-%d",
-                    "%H:%M:%S",
-                    "%H:%M"
-                ]
-                
-                for fmt in formats:
-                    try:
-                        return datetime.strptime(datetime_str, fmt)
-                    except:
-                        continue
+            return datetime.fromisoformat(datetime_str.replace('Z', '+07:00'))
                         
-            except Exception as e:
-                print(f"⚠️ Could not parse datetime: {datetime_str}")
-                return None
+        except Exception as e:
+            print(f"⚠️ Could not parse datetime: {datetime_str}")
+            return None
 
     def process_user_input(self, user_input: str) -> dict:
         """Complete activity extraction and storage process"""
         try:
-            # Step 1: Extract activities
             activities = self.extract_activities(user_input)
             
             if not activities:
@@ -130,8 +111,8 @@ class ActivityExtractor:
                     "activities_stored": 0
                 }
             
-            # Step 2: Store activities
             stored_activities = self.store_activities(activities)
+            print(f"📊 Processed {stored_activities} activities from user input")
             
             return {
                 "success": True,

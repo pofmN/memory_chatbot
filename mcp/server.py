@@ -10,6 +10,7 @@ from core.base.storage import DatabaseManager
 from typing import Optional, List
 from agent.extract_user_info.agent import save_user_information
 from agent.extract_event.agent import save_event_extraction_agent
+from agent.recommendation.activity_extractor import extract_and_store_activities
 import json
 
 load_dotenv()
@@ -122,6 +123,26 @@ async def add_event(user_input: str) -> str:
             return "Failed to create event."
     except Exception as e:
         return f"Error creating event: {str(e)}"
+    
+@mcp.tool()
+async def add_activity(user_input: str) -> str:
+    """
+    Add an activity to the database.
+    
+    Args:
+        user_input (str): The input string containing activity information.
+        
+    Returns:
+        str: Confirmation message or error message.
+    """
+    try:
+        activity_info = extract_and_store_activities(user_input)
+        if activity_info:
+            return activity_info
+        else:
+            return "Failed to create activity."
+    except Exception as e:
+        return f"Error creating activity: {str(e)}"
 
 @mcp.tool()
 async def test_mcp_server() -> str:

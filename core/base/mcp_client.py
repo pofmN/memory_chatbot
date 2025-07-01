@@ -5,15 +5,6 @@ import uuid
 from typing import Dict, Any
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-# from langchain_tavily import TavilySearch
-# from langchain.tools import StructuredTool
-# from langgraph.graph import StateGraph, START, END
-# from langgraph.graph.message import add_messages
-# from langgraph.prebuilt import ToolNode, tools_condition
-# from typing import Annotated
-# from core.utils.get_current_profile import get_user_profile
-# from typing_extensions import TypedDict
-# from ui.ui_components import generate_custom_system_prompt, get_personality_presets
 import streamlit as st
 
 class MCPClient():
@@ -87,7 +78,28 @@ class MCPClient():
                         else:
                             return "Event added successfully."
         except Exception as e:
-            return f"Error adding event: {str(e)}"
+            return f"Error adding event at mcp client: {str(e)}"
+        
+    async def add_activity(self, user_input: str) -> str:
+        """Add an activity to the MCP server."""
+        try:
+            async with asyncio.timeout(15):
+                async with stdio_client(self.server_params) as (read, write):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        
+                        result = await session.call_tool(
+                            "add_activity",
+                            arguments={"user_input": user_input}
+                        )
+                        
+                        if hasattr(result, 'content') and result.content:
+                            content = result.content[0] if isinstance(result.content, list) else result.content
+                            return content.text if hasattr(content, 'text') else str(content)
+                        else:
+                            return "Activity added successfully."
+        except Exception as e:
+            return f"Error adding activity: {str(e)}"   
             
 
 def init_mcp_client() -> MCPClient:
@@ -120,6 +132,14 @@ def add_event_information(user_input:str, mcp_client: MCPClient) -> str:
     except Exception as e:
         return f"Error adding event: {str(e)}"
     
+def add_activity_information(user_input: str, mcp_client: MCPClient) -> str:
+    """Add an activity to the MCP server."""
+    try:
+        activity_info = asyncio.run(mcp_client.add_activity(user_input))
+        return activity_info
+    except Exception as e:
+        return f"Error adding activity: {str(e)}"
+
 def initialize_session(db):
     """Initialize single persistent session"""
     if "single_session_id" not in st.session_state:

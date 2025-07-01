@@ -4,7 +4,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
-from .service import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis
+from agent.recommendation.service import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from agent.recommendation.prompt import ACTIVITY_ANALYSIS_PROMPT
@@ -23,15 +23,19 @@ class ActivityAnalyzer:
         )
         
         self.analysis_prompt = """
-You are an AI assistant that analyzes user activity patterns to understand their preferences and habits.
+        You are an AI assistant that analyzes user activity patterns to understand their preferences and habits.
+        ### Table Descriptions:
+        - **activities**: Stores detailed records of a user's daily activities, capturing what they do throughout the day based on interactions with the chatbot. 
+        Includes a unique identifier, activity name, optional description, start and end times, and an array of tags for categorization.
+        - **activities_analysis**: Holds aggregated analysis of a user's activities, including the activity type, preferred time (e.g., "morning", "evening"), 
+        a JSONB daily pattern counting occurrences by time of day, estimated frequency per week and month, and a last updated timestamp.
 
-Analyze the following activities for the activity type: "{activity_type}"
+        Analyze the following activities for the activity type: "{activity_type}"
 
-Activities data:
-{activities_data}
-
-{ACTIVITY_ANALYSIS_PROMPT}
-"""
+        Activities data:
+        {activities_data}
+        {ACTIVITY_ANALYSIS_PROMPT}
+        """
 
     def analyze_activities(self) -> dict:
         """Analyze all activities and create/update analysis records"""
@@ -110,40 +114,7 @@ Activities data:
         """Normalize activity names to group similar activities"""
         activity_name = activity_name.lower().strip()
         
-        # Define activity mappings
-        mappings = {
-            # Exercise activities
-            'gym': ['gym', 'workout', 'exercise', 'fitness', 'weight training', 'lifting'],
-            'jogging': ['jogging', 'running', 'jog', 'run'],
-            'walking': ['walking', 'walk', 'stroll'],
-            'swimming': ['swimming', 'swim'],
-            'cycling': ['cycling', 'bike', 'biking'],
-            
-            # Social activities
-            'meeting_friends': ['meeting friends', 'hang out', 'social', 'friends'],
-            'family_time': ['family dinner', 'family time', 'family', 'parents'],
-            'date': ['date', 'romantic dinner', 'dating'],
-            
-            # Work activities
-            'work_meeting': ['meeting', 'team meeting', 'work meeting', 'conference'],
-            'office_work': ['office work', 'work', 'office'],
-            
-            # Personal activities
-            'cooking': ['cooking', 'cook', 'prepare meal', 'dinner'],
-            'shopping': ['shopping', 'shop', 'grocery'],
-            'cleaning': ['cleaning', 'clean', 'house work'],
-            'reading': ['reading', 'read', 'book'],
-            
-            # Entertainment
-            'movie': ['movie', 'watch movie', 'cinema', 'film'],
-            'gaming': ['gaming', 'game', 'video game'],
-            'music': ['music', 'listen music', 'concert']
-        }
-        
-        # Check if activity matches any mapping
-        for standard_name, variations in mappings.items():
-            if any(variation in activity_name for variation in variations):
-                return standard_name
+             
         
         # If no mapping found, return the original name
         return activity_name

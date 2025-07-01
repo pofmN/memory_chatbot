@@ -14,6 +14,7 @@ db = DatabaseManager()
 def create_activity(activity_data: Dict) -> Optional[int]:
     """Create a new activity"""
     conn = db.get_connection()
+    print(f"🔍 Creating activity with data: {activity_data}")
     if conn:
         try:
             with conn.cursor() as cur:
@@ -30,11 +31,64 @@ def create_activity(activity_data: Dict) -> Optional[int]:
                 ))
                 activity_id = cur.fetchone()[0]
                 conn.commit()
-                print(f"✅ Created activity with ID: {activity_id}")
+                print(f"✅ Created activity with ID: {activity_data.get('start_at')} - {activity_id}")
                 return activity_id
         except psycopg2.Error as e:
             print(f"Error creating activity: {e}")
             conn.rollback()
+            return None
+        finally:
+            conn.close()
+    return None
+
+def create_activity_analysis(analysis_data: Dict) -> Optional[int]:
+    """Create activity analysis record"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO activities_analysis (
+                        activity_type, preferred_time, daily_pattern, 
+                        frequency_per_week, frequency_per_month
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    analysis_data["activity_type"],
+                    analysis_data.get("preferred_time"),
+                    json.dumps(analysis_data.get("daily_pattern", {})),
+                    analysis_data.get("frequency_per_week", 0),
+                    analysis_data.get("frequency_per_month", 0)
+                ))
+                analysis_id = cur.fetchone()[0]
+                conn.commit()
+                print(f"✅ Created activity analysis with ID: {analysis_id}")
+                return analysis_id
+        except psycopg2.Error as e:
+            print(f"Error creating activity analysis: {e}")
+            conn.rollback()
+            return None
+        finally:
+            conn.close()
+    return None
+
+def get_activity_analysis(activity_type: str) -> Optional[Dict]:
+    """Get activity analysis by type"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM activities_analysis 
+                    WHERE activity_type = %s
+                    ORDER BY last_updated DESC
+                    LIMIT 1
+                """, (activity_type,))
+                result = cur.fetchone()
+                return dict(result) if result else None
+        except psycopg2.Error as e:
+            print(f"Error getting activity analysis: {e}")
             return None
         finally:
             conn.close()
@@ -97,10 +151,10 @@ def get_activities_by_type(activity_type: str) -> List[Dict]:
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Use ILIKE for case-insensitive search
+                # Use ILIKE for case-insensitive search - check correct column name
                 cur.execute("""
                     SELECT * FROM activities 
-                    WHERE LOWER(name) LIKE %s 
+                    WHERE LOWER(activity_name) LIKE %s 
                     ORDER BY COALESCE(start_at, CURRENT_TIMESTAMP) DESC
                 """, (f"%{activity_type.lower()}%",))
                 return [dict(row) for row in cur.fetchall()]
@@ -110,6 +164,47 @@ def get_activities_by_type(activity_type: str) -> List[Dict]:
         finally:
             conn.close()
     return []
+
+def get_all_activity_analyses() -> List[Dict]:
+    """Get all activity analyses"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM activities_analysis 
+                    ORDER BY last_updated DESC
+                """)
+                return [dict(row) for row in cur.fetchall()]
+        except psycopg2.Error as e:
+            print(f"Error getting activity analyses: {e}")
+            return []
+        finally:
+            conn.close()
+    return []
+
+def delete_activity_analysis(analysis_id: int) -> bool:
+    """Delete activity analysis record"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    DELETE FROM activities_analysis 
+                    WHERE id = %s
+                """, (analysis_id,))
+                conn.commit()
+                success = cur.rowcount > 0
+                if success:
+                    print(f"✅ Deleted activity analysis with ID: {analysis_id}")
+                return success
+        except psycopg2.Error as e:
+            print(f"Error deleting activity analysis: {e}")
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+    return False
 
 def get_recent_activities(limit: int = 10) -> List[Dict]:
     """Get recent activities"""
@@ -482,74 +577,3 @@ def get_alert_stats() -> Dict:
         finally:
             conn.close()
     return {}
-
-def update_activity_analysis(analysis_id: int, analysis_data: Dict) -> bool:
-    """Update existing activity analysis"""
-    conn = db.get_connection()
-    if conn:
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE activities_analysis 
-                    SET activity_type = %s, preferred_time = %s, daily_pattern = %s, 
-                        frequency_per_week = %s, frequency_per_month = %s, last_updated = %s
-                    WHERE id = %s
-                """, (
-                    analysis_data["activity_type"],
-                    analysis_data.get("preferred_time"),
-                    json.dumps(analysis_data.get("daily_pattern", {})),
-                    analysis_data.get("frequency_per_week", 0),
-                    analysis_data.get("frequency_per_month", 0),
-                    datetime.now(),
-                    analysis_id
-                ))
-                conn.commit()
-                success = cur.rowcount > 0
-                if success:
-                    print(f"✅ Updated analysis for {analysis_data['activity_type']}")
-                return success
-        except psycopg2.Error as e:
-            print(f"Error updating activity analysis: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-    return False
-
-def get_all_activity_analyses() -> List[Dict]:
-    """Get all activity analyses"""
-    conn = db.get_connection()
-    if conn:
-        try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("""
-                    SELECT * FROM activities_analysis 
-                    ORDER BY last_updated DESC
-                """)
-                return [dict(row) for row in cur.fetchall()]
-        except psycopg2.Error as e:
-            print(f"Error getting activity analyses: {e}")
-            return []
-        finally:
-            conn.close()
-    return []
-
-def get_activities_by_type(activity_type: str) -> List[Dict]:
-    """Get activities by normalized type"""
-    conn = db.get_connection()
-    if conn:
-        try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Use ILIKE for case-insensitive search
-                cur.execute("""
-                    SELECT * FROM activities 
-                    WHERE LOWER(name) LIKE %s 
-                    ORDER BY COALESCE(start_at, CURRENT_TIMESTAMP) DESC
-                """, (f"%{activity_type.lower()}%",))
-                return [dict(row) for row in cur.fetchall()]
-        except psycopg2.Error as e:
-            print(f"Error getting activities by type: {e}")
-            return []
-        finally:
-            conn.close()
-    return []
