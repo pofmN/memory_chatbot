@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from langchain_openai import ChatOpenAI
 from core.base.schema import ActivitiesInformation
-from agent.recommendation.service import create_activity, get_recent_activities, get_all_activities
+from agent.recommendation.services import create_activity, get_all_activities
 from agent.recommendation.prompt import EXTRACT_ACTIVITIES_PROMPT
 from datetime import datetime
 import dotenv
@@ -23,7 +23,6 @@ class ActivityExtractor:
         
         self.extraction_prompt = f"""
 {EXTRACT_ACTIVITIES_PROMPT}
-
 """
 
     def extract_activities(self, user_input: str) -> list:
@@ -60,7 +59,7 @@ class ActivityExtractor:
             return []
 
     def store_activities(self, activities: list) -> list:
-        """Store extracted activities in database"""
+        """Store extracted activities in database with status tracking"""
         stored_activities = []
         
         for activity in activities:
@@ -71,20 +70,20 @@ class ActivityExtractor:
                     "description": activity.get("description"),
                     "start_at": self._parse_datetime(activity.get("start_at")),
                     "end_at": self._parse_datetime(activity.get("end_at")),
-                    "tags": activity.get("tags", [])
+                    "tags": activity.get("tags", []),
+                    "status": "pending"  # ✅ Set initial status
                 }
                 
                 activity_id = create_activity(activity_data)
                 
-                #print(f"📦 Storing activity: {activity_data}")
                 if activity_id:
                     activity_data["id"] = activity_id
                     stored_activities.append(activity_data)
-                    print(f"✅ Stored activity: {activity_data['activity_name']}")
+                    print(f"✅ Stored activity: {activity_data['activity_name']} (Status: pending)")
                 
             except Exception as e:
                 print(f"❌ Error storing activity {activity.get('activity_name', 'Unknown')}: {e}")
-        
+    
         return stored_activities
 
     def _parse_datetime(self, datetime_str: str):

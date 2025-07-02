@@ -41,51 +41,47 @@ ACTIVITY_ANALYSIS_PROMPT = """
 Based on this data, provide analysis in the following format:
 
 1. **Preferred Time**: When does the user usually do this activity? Options: "morning" (6-12), "afternoon" (12-18), "evening" (18-24), "night" (0-6), or "mixed" if no clear preference emerges.
-2. **Daily Pattern**: Count how many times this activity occurs at different times of day. Return as JSON like: {"morning": 2, "afternoon": 1, "evening": 3} based on the start_at timestamp, 
-where morning is 6:00-11:59, afternoon is 12:00-17:59, evening is 18:00-23:59, and night is 00:00-05:59.
 3. **Frequency Per Week**: Estimate how many times per week the user does this activity (0-7), based on the number of occurrences over the past 7 days from the current date (July 01, 2025).
 4. **Frequency Per Month**: Estimate how many times per month the user does this activity (0-30), based on the number of occurrences over the past 30 days from the current date (July 01, 2025).
 5. **Additional Insights**: Any patterns, preferences, or recommendations based on the activity data, considering the context of the activities table (e.g., tags, description) and the analysis goals.
 
 ### Instructions:
 1. Parse the activities data, which is a list of JSON objects from the activities table, each containing "activity_name", "description", "start_at", "end_at", and "tags". Filter for entries where the activity_name matches or is closely related to "{activity_type}".
-2. Calculate the preferred time by identifying the time slot with the highest occurrence count from the daily pattern.
-3. Derive the daily pattern by counting activities within each time slot based on the start_at timestamp.
 4. Estimate frequencies by counting relevant activities within the last 7 days (weekly) and 30 days (monthly) from July 01, 2025.
 5. Provide insights that may include tag-based trends, duration patterns (end_at - start_at), or suggestions (e.g., "Consider scheduling more evening activities").
-6. Format the output as a JSON object with the keys "preferred_time", "daily_pattern", "frequency_per_week", "frequency_per_month", and "insights".
+6. Format the output as a JSON object with the keys "preferred_time", "frequency_per_week", "frequency_per_month", and "insights".
 
 ### Example Inputs and Outputs:
 - **Input**: 
   - activities_data: [
       {"activity_name": "jogging", "description": "morning run", "start_at": "2025-06-25 07:00:00+07:00", "end_at": "2025-06-25 07:30:00+07:00", "tags": ["jogging", "morning"]},
-      {"activity_name": "jogging", "description": "evening jog", "start_at": "2025-06-26 18:30:00+07:00", "end_at": "2025-06-26 19:00:00+07:00", "tags": ["jogging", "evening"]},
-      {"activity_name": "jogging", "description": null, "start_at": "2025-06-27 18:45:00+07:00", "end_at": "2025-06-27 19:15:00+07:00", "tags": ["jogging"]}
     ]
   - **Output**: 
     {
+      "activity_type": "jogging",
       "preferred_time": "evening",
-      "daily_pattern": {"morning": 1, "afternoon": 0, "evening": 2, "night": 0},
       "frequency_per_week": 3,
       "frequency_per_month": 3,
-      "insights": "User prefers evening jogging, with two occurrences in the last week. Tags suggest a focus on evening routines."
     }
 
 - **Input**: 
   - activities_data: [
       {"activity_name": "team meeting", "description": "project sync", "start_at": "2025-06-20 10:00:00+07:00", "end_at": "2025-06-20 11:00:00+07:00", "tags": ["work", "meeting"]},
-      {"activity_name": "client meeting", "description": null, "start_at": "2025-06-28 14:00:00+07:00", "end_at": "2025-06-28 15:00:00+07:00", "tags": ["meeting", "client"]}
     ]
   - **Output**: 
     {
+      "activity_type": "team meeting",
       "preferred_time": "mixed",
-      "daily_pattern": {"morning": 1, "afternoon": 1, "evening": 0, "night": 0},
       "frequency_per_week": 1,
       "frequency_per_month": 2,
-      "insights": "User has mixed meeting times, with one morning and one afternoon occurrence. Consider scheduling future meetings in the morning based on the pattern."
     }
+ Provide analysis in EXACT JSON format (no markdown, no extra text)
+"""
 
-### User Input:
-- activities_data: {activities_data}
-Please provide the analysis in JSON format based on the above instructions.
+RECOMMENDATION_PROMPT = """
+You are an intelligent assistant tasked with providing personalized activity recommendations based on user preferences, user activities and past activities. 
+Your goal is to analyze the user's activity history and suggest new activities that align with their interests and habits. Also base on upcoming events of user
+to give recommendations for upcoming events. 
+
+Generate 3-7 recommendations based on the analysis. Focus on actionable, personalized suggestions.
 """

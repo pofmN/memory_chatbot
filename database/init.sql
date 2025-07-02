@@ -44,7 +44,6 @@ CREATE TABLE chat_summaries (
 -- Create recommendation table
 CREATE TABLE recommendation (
     recommendation_id SERIAL PRIMARY KEY,
-    session_id VARCHAR(100),
     recommendation_type VARCHAR(50),
     title VARCHAR(100),
     content TEXT,

@@ -4,20 +4,22 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
-from agent.recommendation.service import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis
-from datetime import datetime, timedelta
+from agent.recommendation.services import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis, get_pending_activities, mark_activities_analyzed
 from collections import defaultdict, Counter
 from agent.recommendation.prompt import ACTIVITY_ANALYSIS_PROMPT
+from core.base.schema import ActivityAnalysis
+from core.base.storage import DatabaseManager
 import json
 import dotenv
 
 dotenv.load_dotenv()
+db = DatabaseManager()
 
 class ActivityAnalyzer:
     def __init__(self):
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
-            temperature=0.3,  # Medium temperature for analysis
+            temperature=0.3,
             api_key=os.environ.get("OPENAI_API_KEY"),
             base_url="https://warranty-api-dev.picontechnology.com:8443"
         )
@@ -27,8 +29,8 @@ class ActivityAnalyzer:
         ### Table Descriptions:
         - **activities**: Stores detailed records of a user's daily activities, capturing what they do throughout the day based on interactions with the chatbot. 
         Includes a unique identifier, activity name, optional description, start and end times, and an array of tags for categorization.
-        - **activities_analysis**: Holds aggregated analysis of a user's activities, including the activity type, preferred time (e.g., "morning", "evening"), 
-        a JSONB daily pattern counting occurrences by time of day, estimated frequency per week and month, and a last updated timestamp.
+        - **activities_analysis**: Holds aggregated analysis of a user's activities, including the activity type, preferred time (e.g., "morning", "evening")
+        , estimated frequency per week and month, and a last updated timestamp.
 
         Analyze the following activities for the activity type: "{activity_type}"
 
@@ -38,25 +40,26 @@ class ActivityAnalyzer:
         """
 
     def analyze_activities(self) -> dict:
-        """Analyze all activities and create/update analysis records"""
+        """Analyze only pending activities and update their status"""
         try:
-            # Get all activities from database
-            all_activities = get_all_activities()
+            # Get only pending activities
+            pending_activities = get_pending_activities()
             
-            if not all_activities:
+            if not pending_activities:
                 return {
-                    "success": False,
-                    "message": "No activities found to analyze",
+                    "success": True,
+                    "message": "No pending activities found to analyze",
                     "analyzed_count": 0
                 }
             
-            print(f"🔍 Analyzing {len(all_activities)} activities...")
+            print(f"🔍 Found {len(pending_activities)} pending activities to analyze...")
             
-            # Group activities by type/name for analysis
-            activity_groups = self._group_activities(all_activities)
+            # Group activities by type/tags
+            activity_groups = self._group_activities(pending_activities)
             
             analyzed_count = 0
             results = []
+            analyzed_activity_ids = []
             
             for activity_type, activities in activity_groups.items():
                 try:
@@ -74,16 +77,27 @@ class ActivityAnalyzer:
                                 "analysis": analysis_result,
                                 "activity_count": len(activities)
                             })
+                            
+                            # Collect activity IDs for status update
+                            for activity in activities:
+                                if activity.get('id'):
+                                    analyzed_activity_ids.append(activity['id'])
+                            
                             print(f"✅ Analyzed '{activity_type}' ({len(activities)} instances)")
                         
                 except Exception as e:
                     print(f"❌ Error analyzing {activity_type}: {e}")
                     continue
             
+            # Update status of analyzed activities
+            if analyzed_activity_ids:
+                mark_activities_analyzed(analyzed_activity_ids)
+            
             return {
                 "success": True,
                 "message": f"Successfully analyzed {analyzed_count} activity types",
                 "analyzed_count": analyzed_count,
+                "activities_processed": len(analyzed_activity_ids),
                 "results": results
             }
             
@@ -100,24 +114,20 @@ class ActivityAnalyzer:
         groups = defaultdict(list)
         
         for activity in activities:
-            # Use the activity name as the key, normalize it
-            activity_type = activity.get('activity_name', '').lower().strip()
-            
-            if activity_type:
-                # Group similar activities together
-                normalized_type = self._normalize_activity_type(activity_type)
-                groups[normalized_type].append(activity)
+            tags = activity.get('tags', [])
+            activity_name = activity.get('activity_name', '').lower().strip()
+            if tags:
+                # Use tags to group activity
+                for tag in tags:
+                    normalized_tag = tag.lower().strip()
+                    groups[normalized_tag].append(activity)
+                    
+            elif activity_name:
+                # Normalize activity name and group by it
+                normalized_name = activity_name.lower().strip()
+                groups[normalized_name].append(activity)
         
         return dict(groups)
-
-    def _normalize_activity_type(self, activity_name: str) -> str:
-        """Normalize activity names to group similar activities"""
-        activity_name = activity_name.lower().strip()
-        
-             
-        
-        # If no mapping found, return the original name
-        return activity_name
 
     def _analyze_activity_group(self, activity_type: str, activities: list) -> dict:
         """Analyze a group of similar activities using LLM"""
@@ -139,17 +149,19 @@ class ActivityAnalyzer:
             activities_data = json.dumps(activities_summary, indent=2)
             prompt = self.analysis_prompt.format(
                 activity_type=activity_type,
-                activities_data=activities_data
+                activities_data=activities_data,
+                ACTIVITY_ANALYSIS_PROMPT=ACTIVITY_ANALYSIS_PROMPT
             )
             
-            # Get analysis from LLM
-            response = self.llm.invoke(prompt)
-            
             try:
-                # Parse JSON response
-                analysis_data = json.loads(response.content)
-                
-                # Validate and clean the analysis data
+                response = self.llm.with_structured_output(ActivityAnalysis).invoke(prompt)
+                if isinstance(response, ActivityAnalysis):
+                    response = response.model_dump()
+                else:
+                    print(f"❌ Unexpected response type for {activity_type}: {type(response)}")
+                    response = None
+                    return None
+                analysis_data = response
                 cleaned_analysis = self._validate_analysis(analysis_data)
                 
                 return cleaned_analysis
@@ -220,15 +232,15 @@ class ActivityAnalyzer:
             print(f"❌ Error storing analysis for {activity_type}: {e}")
             return False
 
-    def analyze_single_activity_type(self, activity_type: str) -> dict:
+    def _analyze_single_activity_type(self, activity_type: str) -> dict:
         """Analyze a single activity type"""
         try:
             all_activities = get_all_activities()
             
-            # Filter activities for this type
             filtered_activities = [
                 activity for activity in all_activities 
-                if self._normalize_activity_type(activity.get('activity_name', '').lower()) == activity_type.lower()
+                if (activity.get('activity_name', '').lower()) == activity_type.lower() # maybe use tags instead
+                or activity_type.lower() in [tag.lower() for tag in activity.get('tags', [])]
             ]
             
             if not filtered_activities:
@@ -261,14 +273,38 @@ class ActivityAnalyzer:
                 "success": False,
                 "error": str(e)
             }
+    def _reanalyze_all_activities() -> dict:
+        """Force reanalysis of all activities (including already analyzed ones)"""
+        try:
+            # Reset all activities to pending
+            conn = db.get_connection()
+            if conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE activities SET status = 'pending'")
+                    conn.commit()
+                    reset_count = cur.rowcount
+                    print(f"🔄 Reset {reset_count} activities to pending status")
+                conn.close()
+            
+            # Now analyze all pending activities
+            return activity_analyzer.analyze_activities()
+            
+        except Exception as e:
+            print(f"❌ Error in reanalysis: {e}")
+            return {"success": False, "error": str(e)}
+        
 
 # Global activity analyzer instance
 activity_analyzer = ActivityAnalyzer()
 
-def analyze_all_activities() -> dict:
-    """Main function to analyze all activities"""
-    return activity_analyzer.analyze_activities()
-
 def analyze_activity_type(activity_type: str) -> dict:
     """Analyze a specific activity type"""
-    return activity_analyzer.analyze_single_activity_type(activity_type)
+    return activity_analyzer._analyze_single_activity_type(activity_type)
+
+def analyze_pending_activities() -> dict:
+    """Analyze only activities with 'pending' status"""
+    return activity_analyzer.analyze_activities()
+
+def reanalyze_all_activities() -> dict:
+    """Force reanalysis of all activities"""
+    return activity_analyzer._reanalyze_all_activities()

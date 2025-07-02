@@ -12,10 +12,10 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
-from .service import (
-    get_upcoming_events, get_event_conflicts, get_overdue_events,
-    get_today_events, get_event_patterns, create_system_alert,
-    alert_exists, delete_old_alerts
+from .services import (
+    get_upcoming_events, get_event_conflicts,
+    get_today_events, create_system_alert,
+    alert_exists, delete_old_alerts, get_event_patterns
 )
 import dotenv
 
@@ -59,7 +59,6 @@ class BackgroundRecommendationAgent:
                 # Run different monitoring tasks
                 self._check_upcoming_events()
                 self._check_event_conflicts()
-                self._check_overdue_events()
                 self._generate_daily_recommendations()
                 self._cleanup_old_alerts()
                 
@@ -117,28 +116,6 @@ class BackgroundRecommendationAgent:
                     })
         except Exception as e:
             print(f"❌ Error checking event conflicts: {e}")
-    
-    def _check_overdue_events(self):
-        """Check for events that should have ended but haven't been updated"""
-        try:
-            overdue_events = get_overdue_events(days_back=7)
-            
-            for event in overdue_events:
-                # Check if we already alerted for this event
-                if not alert_exists("overdue_event", event["event_id"]):
-                    create_system_alert({
-                        "type": "overdue_event",
-                        "priority": "low",
-                        "title": f"Event Completed: {event['event_name']}",
-                        "message": f"Event '{event['event_name']}' has ended. Consider adding a summary or follow-up actions.",
-                        "event_id": event["event_id"],
-                        "metadata": {
-                            "event_name": event["event_name"],
-                            "end_time": (event.get("end_time") or event["start_time"] + timedelta(hours=1)).isoformat()
-                        }
-                    })
-        except Exception as e:
-            print(f"❌ Error checking overdue events: {e}")
     
     def _generate_daily_recommendations(self):
         """Generate daily recommendations based on event patterns"""

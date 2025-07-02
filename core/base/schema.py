@@ -32,6 +32,22 @@ class ActivitiesInformation(BaseModel):
     description: Annotated[Optional[str], Field(description="Description of the activity")]
     tags: Annotated[Optional[list[str]], Field(description="Tags associated with the activity")]
 
+class ActivityAnalysis(BaseModel):
+    activity_type: Annotated[Optional[str], Field(description="Type of the activity (e.g., jogging, meeting, reading)")]
+    preferred_time: Annotated[Optional[str], Field(description="Preferred time for the activity (e.g., morning, afternoon, evening, night, mixed)")]
+    frequency_per_week: Annotated[Optional[int], Field(description="Estimated frequency of the activity per week (0-7)")]
+    frequency_per_month: Annotated[Optional[int], Field(description="Estimated frequency of the activity per month (0-30)")]
+
+class Recommendation(BaseModel):
+    recommendation_type: Annotated[Optional[str], Field(description="Type of recommendation (e.g., activity, event, alert)")]
+    title: Annotated[Optional[str], Field(description="Title of the recommendation")]
+    content: Annotated[Optional[str], Field(description="Content of the recommendation, which can include details about the activity, event, or alert")]
+    score: Annotated[Optional[int], Field(description="Score or rating of the recommendation, indicating its relevance or importance")]
+    reason: Annotated[Optional[str], Field(description="Reasoning behind the recommendation, explaining why it is suggested to the user")]
+    created_at: Annotated[Optional[str], Field(description="Timestamp when the recommendation was created, in ISO format")] 
+    shown_at: Annotated[Optional[str], Field(description="Timestamp when the recommendation was shown to the user, in ISO format")]
+    status: Annotated[Optional[str], Field(description="Status of the recommendation (e.g., pending, accepted, rejected)")]
+
 class AlertInformation(BaseModel):
     alert_type: Annotated[Optional[str], Field(description="Type of the alert (e.g., reminder, notification)")]
     title: Annotated[Optional[str], Field(description="Title of the alert")]
