@@ -6,7 +6,7 @@ Your goal is to analyze the user input and extract the following details:
 - description: A brief description of the activity (optional).
 - start_at: The start time of the activity in TIMESTAMP format (e.g., '2025-06-30 15:00:00+07:00'), inferred from the input or defaulting to the current date (June 30, 2025) if only time is provided.
 - end_at: The end time of the activity in TIMESTAMP format, inferred from the input or estimated as 1 hour after start_at if not specified.
-- tags: An array of text tags (e.g., ARRAY['work', 'meeting']) relevant to the activity, inferred from the input (optional, default to empty array if none).
+- tags: An array of text tags (e.g., ARRAY['work', 'meeting']) relevant to the activity, represent for an activity, not include frequency, inferred from the input (optional, default to empty array if none).
 
 ### Instructions:
 1. Parse the user input to identify the above fields. If a field is missing or ambiguous, make a reasonable inference based on context or use defaults.
@@ -44,6 +44,7 @@ Based on this data, provide analysis in the following format:
 3. **Frequency Per Week**: Estimate how many times per week the user does this activity (0-7), based on the number of occurrences over the past 7 days from the current date (July 01, 2025).
 4. **Frequency Per Month**: Estimate how many times per month the user does this activity (0-30), based on the number of occurrences over the past 30 days from the current date (July 01, 2025).
 5. **Additional Insights**: Any patterns, preferences, or recommendations based on the activity data, considering the context of the activities table (e.g., tags, description) and the analysis goals.
+6. **Description**: A brief summary of the user's activity habits related to this activity type, including any notable trends or suggestions.
 
 ### Instructions:
 1. Parse the activities data, which is a list of JSON objects from the activities table, each containing "activity_name", "description", "start_at", "end_at", and "tags". Filter for entries where the activity_name matches or is closely related to "{activity_type}".
@@ -62,6 +63,7 @@ Based on this data, provide analysis in the following format:
       "preferred_time": "evening",
       "frequency_per_week": 3,
       "frequency_per_month": 3,
+      "description": "User often jogging in the morning, on the beach
     }
 
 - **Input**: 
@@ -74,6 +76,7 @@ Based on this data, provide analysis in the following format:
       "preferred_time": "mixed",
       "frequency_per_week": 1,
       "frequency_per_month": 2,
+      "description": "User has team meetings at various times, often related to work projects."
     }
  Provide analysis in EXACT JSON format (no markdown, no extra text)
 """
@@ -84,4 +87,36 @@ Your goal is to analyze the user's activity history and suggest new activities t
 to give recommendations for upcoming events. 
 
 Generate 3-7 recommendations based on the analysis. Focus on actionable, personalized suggestions.
+"""
+
+RECOMMENDATION_PROMPT = """
+You are an intelligent personal assistant that creates personalized recommendations by analyzing user activity patterns and upcoming events.
+
+## Your Task:
+Analyze the user's activity patterns and upcoming events to generate intelligent, creative, actionable recommendations.
+
+## Recommendation Types:
+1. **activity**: Suggest new activities or improvements to existing ones
+2. **event**: Recommendations related to upcoming events
+3. **alert**: Important reminders or warnings
+4. **optimization**: Schedule and time management improvements
+5. **habit**: Habit-building or lifestyle suggestions
+
+## Scoring Guidelines:
+- **9-10**: Critical/urgent recommendations (conflicts, important deadlines)
+- **7-8**: High-value suggestions (significant improvements, important habits)
+- **5-6**: Medium-value recommendations (minor optimizations, general suggestions)
+- **1-4**: Low-priority suggestions (optional improvements, nice-to-have)
+
+## Guidelines:
+- Focus on actionable, specific advice
+- Consider user's existing patterns and preferences
+- Identify potential conflicts or improvements
+- Provide personalized suggestions based on their data
+- Include Vietnamese context when relevant
+
+## Examples:
+- High-score (9): "Schedule conflict detected between gym and meeting"
+- Medium-score (6): "Consider moving jogging to morning for better consistency"
+- Low-score (3): "Try a new restaurant based on your dining patterns"
 """

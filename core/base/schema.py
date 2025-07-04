@@ -37,6 +37,7 @@ class ActivityAnalysis(BaseModel):
     preferred_time: Annotated[Optional[str], Field(description="Preferred time for the activity (e.g., morning, afternoon, evening, night, mixed)")]
     frequency_per_week: Annotated[Optional[int], Field(description="Estimated frequency of the activity per week (0-7)")]
     frequency_per_month: Annotated[Optional[int], Field(description="Estimated frequency of the activity per month (0-30)")]
+    description: Annotated[Optional[str], Field(description="Brief summary of the user's activity habits related to this activity type, including any notable trends or suggestions")]
 
 class Recommendation(BaseModel):
     recommendation_type: Annotated[Optional[str], Field(description="Type of recommendation (e.g., activity, event, alert)")]

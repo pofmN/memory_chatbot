@@ -42,7 +42,6 @@ class ActivityAnalyzer:
     def analyze_activities(self) -> dict:
         """Analyze only pending activities and update their status"""
         try:
-            # Get only pending activities
             pending_activities = get_pending_activities()
             
             if not pending_activities:
@@ -54,7 +53,6 @@ class ActivityAnalyzer:
             
             print(f"🔍 Found {len(pending_activities)} pending activities to analyze...")
             
-            # Group activities by type/tags
             activity_groups = self._group_activities(pending_activities)
             
             analyzed_count = 0
@@ -63,11 +61,9 @@ class ActivityAnalyzer:
             
             for activity_type, activities in activity_groups.items():
                 try:
-                    # Analyze this activity type
                     analysis_result = self._analyze_activity_group(activity_type, activities)
                     
                     if analysis_result:
-                        # Store or update analysis in database
                         stored = self._store_analysis(activity_type, analysis_result)
                         
                         if stored:
@@ -78,7 +74,6 @@ class ActivityAnalyzer:
                                 "activity_count": len(activities)
                             })
                             
-                            # Collect activity IDs for status update
                             for activity in activities:
                                 if activity.get('id'):
                                     analyzed_activity_ids.append(activity['id'])
@@ -89,7 +84,6 @@ class ActivityAnalyzer:
                     print(f"❌ Error analyzing {activity_type}: {e}")
                     continue
             
-            # Update status of analyzed activities
             if analyzed_activity_ids:
                 mark_activities_analyzed(analyzed_activity_ids)
             
@@ -132,7 +126,6 @@ class ActivityAnalyzer:
     def _analyze_activity_group(self, activity_type: str, activities: list) -> dict:
         """Analyze a group of similar activities using LLM"""
         try:
-            # Prepare activities data for analysis
             activities_summary = []
             
             for activity in activities:
@@ -141,7 +134,7 @@ class ActivityAnalyzer:
                     "description": activity.get('description'),
                     "start_time": str(activity.get('start_at')) if activity.get('start_at') else None,
                     "end_time": str(activity.get('end_at')) if activity.get('end_at') else None,
-                    "tags": activity.get('tags', [])
+                    "tags": activity.get('tags', []),
                 }
                 activities_summary.append(activity_info)
             
@@ -161,8 +154,7 @@ class ActivityAnalyzer:
                     print(f"❌ Unexpected response type for {activity_type}: {type(response)}")
                     response = None
                     return None
-                analysis_data = response
-                cleaned_analysis = self._validate_analysis(analysis_data)
+                cleaned_analysis = self._validate_analysis(response)
                 
                 return cleaned_analysis
                 
@@ -179,10 +171,9 @@ class ActivityAnalyzer:
         try:
             cleaned = {
                 "preferred_time": analysis_data.get("preferred_time", "mixed"),
-                "daily_pattern": analysis_data.get("daily_pattern", {}),
                 "frequency_per_week": min(max(int(analysis_data.get("frequency_per_week", 0)), 0), 7),
                 "frequency_per_month": min(max(int(analysis_data.get("frequency_per_month", 0)), 0), 30),
-                "insights": analysis_data.get("insights", "")
+                "description": analysis_data.get("description", "No description provided")
             }
             
             # Validate preferred_time
@@ -190,9 +181,6 @@ class ActivityAnalyzer:
             if cleaned["preferred_time"] not in valid_times:
                 cleaned["preferred_time"] = "mixed"
             
-            # Validate daily_pattern
-            if not isinstance(cleaned["daily_pattern"], dict):
-                cleaned["daily_pattern"] = {}
             
             return cleaned
             
@@ -200,31 +188,27 @@ class ActivityAnalyzer:
             print(f"❌ Error validating analysis data: {e}")
             return {
                 "preferred_time": "mixed",
-                "daily_pattern": {},
                 "frequency_per_week": 0,
                 "frequency_per_month": 0,
-                "insights": ""
+                "description": ""
             }
 
     def _store_analysis(self, activity_type: str, analysis_data: dict) -> bool:
         """Store or update activity analysis in database"""
         try:
-            # Check if analysis already exists
             existing_analysis = get_activity_analysis(activity_type)
             
             analysis_record = {
                 "activity_type": activity_type,
                 "preferred_time": analysis_data.get("preferred_time"),
-                "daily_pattern": analysis_data.get("daily_pattern", {}),
                 "frequency_per_week": analysis_data.get("frequency_per_week", 0),
-                "frequency_per_month": analysis_data.get("frequency_per_month", 0)
+                "frequency_per_month": analysis_data.get("frequency_per_month", 0),
+                "description": analysis_data.get("description", "No description provided")
             }
             
             if existing_analysis:
-                # Update existing analysis
                 return update_activity_analysis(existing_analysis['id'], analysis_record)
             else:
-                # Create new analysis
                 analysis_id = create_activity_analysis(analysis_record)
                 return analysis_id is not None
                 
@@ -232,14 +216,14 @@ class ActivityAnalyzer:
             print(f"❌ Error storing analysis for {activity_type}: {e}")
             return False
 
-    def _analyze_single_activity_type(self, activity_type: str) -> dict:
+    def analyze_single_activity_type(self, activity_type: str) -> dict:
         """Analyze a single activity type"""
         try:
             all_activities = get_all_activities()
             
             filtered_activities = [
                 activity for activity in all_activities 
-                if (activity.get('activity_name', '').lower()) == activity_type.lower() # maybe use tags instead
+                if (activity.get('activity_name', '').lower()) == activity_type.lower()
                 or activity_type.lower() in [tag.lower() for tag in activity.get('tags', [])]
             ]
             
@@ -249,7 +233,6 @@ class ActivityAnalyzer:
                     "message": f"No activities found for type: {activity_type}"
                 }
             
-            # Analyze this specific activity type
             analysis_result = self._analyze_activity_group(activity_type, filtered_activities)
             
             if analysis_result:
@@ -273,10 +256,9 @@ class ActivityAnalyzer:
                 "success": False,
                 "error": str(e)
             }
-    def _reanalyze_all_activities() -> dict:
+    def reanalyze_all_activities(self) -> dict:
         """Force reanalysis of all activities (including already analyzed ones)"""
         try:
-            # Reset all activities to pending
             conn = db.get_connection()
             if conn:
                 with conn.cursor() as cur:
@@ -299,7 +281,7 @@ activity_analyzer = ActivityAnalyzer()
 
 def analyze_activity_type(activity_type: str) -> dict:
     """Analyze a specific activity type"""
-    return activity_analyzer._analyze_single_activity_type(activity_type)
+    return activity_analyzer.analyze_single_activity_type(activity_type)
 
 def analyze_pending_activities() -> dict:
     """Analyze only activities with 'pending' status"""
@@ -307,4 +289,4 @@ def analyze_pending_activities() -> dict:
 
 def reanalyze_all_activities() -> dict:
     """Force reanalysis of all activities"""
-    return activity_analyzer._reanalyze_all_activities()
+    return activity_analyzer.reanalyze_all_activities()

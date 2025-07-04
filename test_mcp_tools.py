@@ -6,6 +6,7 @@ import asyncio
 import os
 from core.base.storage import DatabaseManager
 from langchain_openai import ChatOpenAI
+from agent.recommendation.services import update_alert_status
 import uuid
 # Load environment variables
 load_dotenv()
@@ -20,93 +21,104 @@ llm = ChatOpenAI(
         openai_api_key=openai_api,
     )
 
-class MCPClient():
-    def __init__(self, server_path: str):
-        self.server_path = server_path
-        self.server_params = StdioServerParameters(
-            command="python",
-            args=[server_path]
-        )
+# class MCPClient():
+#     def __init__(self, server_path: str):
+#         self.server_path = server_path
+#         self.server_params = StdioServerParameters(
+#             command="python",
+#             args=[server_path]
+#         )
         
-    async def add_user_info(self, user_input: str) -> str:
-        """
-        Add user information to the MCP server.
-        """
-        try:
-            async with asyncio.timeout(15):
-                async with stdio_client(self.server_params) as (read, write):
-                    async with ClientSession(read, write) as session:
-                        await session.initialize()
+#     async def add_user_info(self, user_input: str) -> str:
+#         """
+#         Add user information to the MCP server.
+#         """
+#         try:
+#             async with asyncio.timeout(15):
+#                 async with stdio_client(self.server_params) as (read, write):
+#                     async with ClientSession(read, write) as session:
+#                         await session.initialize()
                         
-                        result = await session.call_tool(
-                            "add_user_info",
-                            arguments={"user_input": user_input}
-                        )
+#                         result = await session.call_tool(
+#                             "add_user_info",
+#                             arguments={"user_input": user_input}
+#                         )
                         
-                        if hasattr(result, 'content') and result.content:
-                            content = result.content[0] if isinstance(result.content, list) else result.content
-                            return content.text if hasattr(content, 'text') else str(content)
-                        else:
-                            return "User information updated successfully."
+#                         if hasattr(result, 'content') and result.content:
+#                             content = result.content[0] if isinstance(result.content, list) else result.content
+#                             return content.text if hasattr(content, 'text') else str(content)
+#                         else:
+#                             return "User information updated successfully."
                             
-        except asyncio.TimeoutError:
-            return "MCP server request timed out"
-        except asyncio.CancelledError:
-            return "MCP operation was cancelled"
-        except Exception as e:
-            return f"Error updating user information: {str(e)}"
+#         except asyncio.TimeoutError:
+#             return "MCP server request timed out"
+#         except asyncio.CancelledError:
+#             return "MCP operation was cancelled"
+#         except Exception as e:
+#             return f"Error updating user information: {str(e)}"
         
-    async def add_activity(self, user_input: str) -> str:
-        """
-        Add an activity to the MCP server.
+#     async def add_activity(self, user_input: str) -> str:
+#         """
+#         Add an activity to the MCP server.
         
-        Args:
-            user_input (str): The user input containing activity details.
+#         Args:
+#             user_input (str): The user input containing activity details.
         
-        Returns:
-            str: Confirmation message or error message.
-        """
-        try:
-            async with asyncio.timeout(15):
-                async with stdio_client(self.server_params) as (read, write):
-                    async with ClientSession(read, write) as session:
-                        await session.initialize()
+#         Returns:
+#             str: Confirmation message or error message.
+#         """
+#         try:
+#             async with asyncio.timeout(15):
+#                 async with stdio_client(self.server_params) as (read, write):
+#                     async with ClientSession(read, write) as session:
+#                         await session.initialize()
                         
-                        result = await session.call_tool(
-                            "add_activity",
-                            arguments={"user_input": user_input}
-                        )
+#                         result = await session.call_tool(
+#                             "add_activity",
+#                             arguments={"user_input": user_input}
+#                         )
                         
-                        if hasattr(result, 'content') and result.content:
-                            content = result.content[0] if isinstance(result.content, list) else result.content
-                            return content.text if hasattr(content, 'text') else str(content)
-                        else:
-                            return "Activity added successfully."
+#                         if hasattr(result, 'content') and result.content:
+#                             content = result.content[0] if isinstance(result.content, list) else result.content
+#                             return content.text if hasattr(content, 'text') else str(content)
+#                         else:
+#                             return "Activity added successfully."
                             
-        except asyncio.TimeoutError:
-            return "MCP server request timed out"
-        except asyncio.CancelledError:
-            return "MCP operation was cancelled"
-        except Exception as e:
-            return f"Error adding activity: {str(e)}"
+#         except asyncio.TimeoutError:
+#             return "MCP server request timed out"
+#         except asyncio.CancelledError:
+#             return "MCP operation was cancelled"
+#         except Exception as e:
+#             return f"Error adding activity: {str(e)}"
         
-MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
-mcp_client = MCPClient(MCP_SERVER_PATH)
+# MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
+# mcp_client = MCPClient(MCP_SERVER_PATH)
 
 
-def add_activity_information(user_input: str) -> str:
-    """
-    Add an activity to the MCP server.
+# def add_activity_information(user_input: str) -> str:
+#     """
+#     Add an activity to the MCP server.
     
-    Args:
-        user_input (str): The user input containing activity details.
+#     Args:
+#         user_input (str): The user input containing activity details.
     
-    Returns:
-        str: Confirmation message or error message.
-    """
-    return asyncio.run(mcp_client.add_activity(user_input))
+#     Returns:
+#         str: Confirmation message or error message.
+#     """
+#     return asyncio.run(mcp_client.add_activity(user_input))
 
 
-user_input = "tôi sẽ vui chơi với gia đình vào 8h tối hằng ngày"
-user_activity_info = add_activity_information(user_input)
-print(f"User Activity Info: {user_activity_info}")
+# user_input = "tôi sẽ vui chơi với gia đình vào 8h tối hằng ngày"
+# user_activity_info = add_activity_information(user_input)
+# print(f"User Activity Info: {user_activity_info}")
+
+status = "sent"
+alert_id = 25
+
+update_rows = update_alert_status(alert_id, status)
+print(f"Updating alert status for ID: {alert_id} to '{status}'...")
+print(f"Rows updated: {update_rows}")
+if update_rows > 0:
+    print(f"✅ Alert status updated to '{status}' for ID: {alert_id}")
+else:
+    print(f"⚠️ No rows updated for alert ID: {alert_id}, it may already be {status}")

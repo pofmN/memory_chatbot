@@ -83,10 +83,10 @@ CREATE TABLE activities_analysis (
     id SERIAL PRIMARY PRIMARY_KEY,
     activity_type VARCHAR(100) NOT NULL,  -- e.g., "jogging", "meeting"
     preferred_time VARCHAR(20),          -- e.g., "morning", "evening"
-    daily_pattern JSONB,                 -- e.g., {"morning": 3, "evening": 5} for counts
     frequency_per_week INTEGER DEFAULT 0,
     frequency_per_month INTEGER DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description TEXT DEFAULT 'No description provided',
 );
 
 CREATE INDEX idx_activities_analysis_activity_type ON activities_analysis(activity_type);

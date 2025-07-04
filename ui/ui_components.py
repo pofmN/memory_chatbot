@@ -1,5 +1,6 @@
 import streamlit as st
 from typing import Dict, Any
+from core.base.storage import DatabaseManager
 
 def generate_custom_system_prompt(personality: str, style: str, length: str, language: str, instructions: str) -> str:
     """Generate a custom system prompt based on user preferences"""
@@ -293,3 +294,37 @@ def render_database_status(db):
             st.error("❌ Database Connection Failed")
     except:
         st.error("❌ Database Connection Failed")
+
+# Add this to your ui_components.py file
+
+import time
+
+def render_notification_auto_refresh():
+    """Auto-refresh notifications every 30 seconds"""
+    if 'last_notification_check' not in st.session_state:
+        st.session_state.last_notification_check = time.time()
+    
+    # Check for new notifications every 30 seconds
+    if time.time() - st.session_state.last_notification_check > 30:
+        st.session_state.last_notification_check = time.time()
+        
+        # Check for new high priority alerts
+        try:
+            db = DatabaseManager()
+            conn = db.get_connection()
+            if conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT COUNT(*) FROM alert 
+                        WHERE status = 'triggered' 
+                        AND priority = 'high'
+                    """)
+                    high_priority_count = cur.fetchone()[0]
+                    
+                    if high_priority_count > 0:
+                        st.toast(f"🔔 You have {high_priority_count} high priority alerts!", icon="🔔")
+        except Exception:
+            pass
+        finally:
+            if conn:
+                conn.close()

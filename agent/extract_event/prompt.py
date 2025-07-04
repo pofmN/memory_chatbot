@@ -68,33 +68,87 @@ ERROR HANDLING:
 - If event is unclear, focus on extracting the clearest information available
 - Don't hallucinate details not present in the input
 Respond with **only JSON**. Do not include explanations or markdown."""
-
 INTENT_DETECTION_PROMPT = """
 You are an intelligent assistant that analyzes user input to determine their intent regarding event management.
 
 Analyze the user input and determine if they want to:
 
 CREATE - Create a new event/appointment/meeting
-UPDATE - Modify/change/reschedule an existing event
+UPDATE - Modify/change/reschedule an existing event  
 SEARCH - Find/look for existing events
 DELETE - Cancel/remove an existing event
-Consider these keywords for different languages:
 
-English CREATE keywords: schedule, book, plan, arrange, set up, create, add, make appointment, new event, organize
-Vietnamese CREATE keywords: đặt lịch, tạo, thêm, sắp xếp, hẹn, lên lịch, tổ chức, sự kiện mới
+SCORING SYSTEM:
+- Primary keywords at start of sentence: 3 points
+- Primary keywords elsewhere: 2 points
+- Context clues + supporting words: 1 point
+- Future tense indicators: 1 point
+- Past tense indicators: -1 point (unless explicitly saving)
 
-English UPDATE keywords: change, modify, update, reschedule, move, shift, postpone, cancel, edit, adjust
-Vietnamese UPDATE keywords: thay đổi, sửa, chỉnh sửa, đổi, chuyển, dời, hủy, hoãn, cập nhật, điều chỉnh
+LANGUAGE-SPECIFIC PATTERNS:
 
-English SEARCH keywords: find, search, show, list, what, when, check, look for, view, see
-Vietnamese SEARCH keywords: tìm, tìm kiếm, xem, kiểm tra, danh sách, xem lịch, hiện, nhìn
+ENGLISH CREATE:
+Primary: schedule, book, plan, arrange, set up, create, add, make appointment, new event, organize, have meeting, meeting with
+Context: tomorrow, next week, at [time], will have, going to, planning to
+Future indicators: will, going to, planning, tomorrow, next, later, tonight, this evening
 
-English DELETE keywords: cancel, delete, remove, drop
-Vietnamese DELETE keywords: hủy, xóa, bỏ
+VIETNAMESE CREATE:
+Primary: đặt lịch, tạo, thêm, sắp xếp, hẹn, lên lịch, tổ chức, sự kiện mới, có cuộc họp, có meeting, có buổi
+Context: ngày mai, tuần tới, tối mai, sáng mai, chiều mai, tối nay, [thời gian], sẽ có, dự định
+Future indicators: sẽ, dự định, có, ngày mai, mai, tối mai, sáng mai, chiều mai, tối nay, tuần tới, tháng tới
+Phrases: "tôi có [event]", "có cuộc [event]", "sẽ có [event]", "[time] tôi có"
 
-Use a scoring system: assign 2 points for keywords at the start of the sentence, 
-1 point for keywords elsewhere, and add 1 point for context clues (e.g., "event", "meeting", "appointment", "lịch", "hẹn") combined with intent-specific keywords. 
-Prioritize the intent with the highest score, defaulting to "UNKNOWN" if no intent is clear.
+ENGLISH UPDATE:
+Primary: change, modify, update, reschedule, move, shift, postpone, cancel, edit, adjust, switch
+Context: existing event, current meeting, scheduled appointment
+
+VIETNAMESE UPDATE:
+Primary: thay đổi, sửa, chỉnh sửa, đổi, chuyển, dời, hủy, hoãn, cập nhật, điều chỉnh, đổi lịch
+Context: cuộc họp đã, sự kiện đã, lịch đã, buổi đã
+
+ENGLISH SEARCH:
+Primary: find, search, show, list, what, when, check, look for, view, see, do I have, what's on
+Context: my schedule, my calendar, upcoming events
+
+VIETNAMESE SEARCH:
+Primary: tìm, tìm kiếm, xem, kiểm tra, danh sách, xem lịch, hiện, nhìn, có gì, lịch nào
+Context: lịch của tôi, sự kiện, cuộc họp nào
+Phrases: "tôi có lịch gì", "xem lịch", "kiểm tra lịch"
+
+ENGLISH DELETE:
+Primary: cancel, delete, remove, drop, cancel appointment, cancel meeting
+Context: existing event, scheduled meeting
+
+VIETNAMESE DELETE:
+Primary: hủy, xóa, bỏ, hủy cuộc họp, hủy lịch, không tham gia
+Context: cuộc họp, sự kiện, lịch hẹn
+
+SPECIAL RULES FOR VIETNAMESE:
+1. "có + [event] + [time]" = CREATE (e.g., "có cuộc họp tối mai")
+2. "tôi có + [event]" = CREATE when combined with future time
+3. Time indicators like "tối mai", "sáng mai", "tuần tới" = strong CREATE signal
+4. "để + [purpose]" = often indicates CREATE with planning context
+5. "với + [people]" = often indicates CREATE for meetings
+
+CONTEXTUAL ANALYSIS:
+- If user mentions specific time/date + event = likely CREATE
+- If user mentions people to meet + time = likely CREATE  
+- If user asks questions (gì, nào, khi nào) = likely SEARCH
+- If user mentions changing existing thing = likely UPDATE
+- If user mentions canceling = likely DELETE
+
+EXAMPLE ANALYSIS:
+Input: "tối mai tôi có cuộc họp quan trọng với thành viên trong team để chuẩn bị cho hội nghị nghiên cứu khoa học ĐH Đà Nẵng"
+
+Analysis:
+- "tối mai" (tomorrow evening) = +1 future indicator
+- "tôi có cuộc họp" (I have a meeting) = +3 primary Vietnamese CREATE
+- "với thành viên trong team" (with team members) = +1 context clue
+- "để chuẩn bị" (to prepare) = +1 planning context
+- No search questions or past tense = 0
+Total: 6 points for CREATE
+
+Respond with only the intent: CREATE, UPDATE, SEARCH, DELETE, or UNKNOWN
 """
 
 UPDATE_EVENT_PROMPT = """

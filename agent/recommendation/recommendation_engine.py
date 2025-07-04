@@ -1,14 +1,14 @@
-# Create: agent/recommendation/recommendation_engine.py
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
 from agent.recommendation.services import (
-    get_all_activity_analyses, get_upcoming_events, 
-    create_system_alert, alert_exists
+    get_all_activity_analysis, get_upcoming_events, 
+    create_system_alert, alert_exists, create_recommendation
 )
 from agent.recommendation.prompt import RECOMMENDATION_PROMPT
+from core.base.schema import Recommendation
 from datetime import datetime, timedelta
 import json
 import dotenv
@@ -19,7 +19,7 @@ class RecommendationEngine:
     def __init__(self):
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
-            temperature=0.8,  # High temperature for creative recommendations
+            temperature=0.8,
             api_key=os.environ.get("OPENAI_API_KEY"),
             base_url="https://warranty-api-dev.picontechnology.com:8443"
         )
@@ -33,41 +33,86 @@ class RecommendationEngine:
 ### Upcoming Events:
 {upcoming_events}
 
+Based on this data, generate 3-5 personalized recommendations. Each recommendation should include:
+- recommendation_type: Type of recommendation (activity, event, alert, optimization, habit)
+- title: Brief, clear title (max 50 characters)
+- content: Detailed description with actionable advice
+- score: Relevance score (1-10, where 10 is most important)
+- reason: Why this recommendation is suggested
+- status: Always set to "pending"
+- shown_at: When this recommendation should be shown (ISO format, e.g., "2024-01-15T10:30:00")
+
+For shown_at, consider:
+- Urgent recommendations: within 30 minutes
+- Important recommendations: within 2-4 hours
+- General recommendations: within 24 hours
+
+Focus on actionable, personalized suggestions that help optimize the user's schedule and habits.
 """
 
     def generate_recommendations(self) -> dict:
         """Generate recommendations based on activity analysis and events"""
         try:
-            # Get activity analysis data
-            activity_analyses = get_all_activity_analyses()
+            activity_analyses = get_all_activity_analysis()
             
-            # Get upcoming events (next 7 days)
             upcoming_events = get_upcoming_events(days=7)
             
             if not activity_analyses and not upcoming_events:
                 return {
-                    "success": True,
+                    "success": False,
                     "message": "No data available for recommendations",
                     "recommendations": []
                 }
             
-            # Prepare data for LLM
             activity_data = self._format_activity_analysis(activity_analyses)
             event_data = self._format_upcoming_events(upcoming_events)
             
-            # Generate recommendations using LLM
             prompt = self.recommendation_prompt.format(
+                RECOMMENDATION_PROMPT=RECOMMENDATION_PROMPT,
                 activity_analysis=activity_data,
                 upcoming_events=event_data
             )
             
-            response = self.llm.invoke(prompt)
+            try:
+                structured_llm = self.llm.with_structured_output(
+                    Recommendation,
+                    method="function_calling"
+                )
+                
+                recommendations = []
+                for i in range(5):
+                    try:
+                        response = structured_llm.invoke(f"{prompt}\n\nGenerate recommendation #{i+1}:")
+                        rec_data = response.model_dump()
+                        print(f"✅ Generated recommendation {i+1}: {rec_data.get('title', 'No title')}")
+                        if rec_data.get('title') and rec_data.get('content'):
+                            recommendations.append(rec_data)
+                        
+                    except Exception as e:
+                        print(f"⚠️ Error generating recommendation {i+1}: {e}")
+                        continue
+    
+                if recommendations:
+                    rec_count = create_recommendation(recommendations)
+                    print(f"✅ Saved {rec_count} recommendations to database")
+    
+                print(f"✅ Generated {len(recommendations)} recommendations using structured output")
+                
+            except Exception as struct_error:
+                print(f"⚠️ Structured output failed: {struct_error}")
+                recommendations = self._fallback_parse_recommendations(prompt)
             
-            # Parse recommendations
-            recommendations = self._parse_recommendations(response.content)
-            
-            # Create alerts for high and medium priority recommendations
-            created_alerts = self._create_alerts_from_recommendations(recommendations)
+            try:
+                created_alerts = self._create_alerts_from_recommendations(recommendations)
+            except Exception as alert_error:
+                print(f"⚠️ Error creating alerts from recommendations: {alert_error}")
+                created_alerts = 0
+                return {
+                    "success": False,
+                    "error": str(alert_error),
+                    "recommendations": recommendations,
+                    "alerts_created": created_alerts
+                }
             
             return {
                 "success": True,
@@ -81,8 +126,58 @@ class RecommendationEngine:
             return {
                 "success": False,
                 "error": str(e),
-                "recommendations": []
+                "recommendations": [],
+                "alerts_created": 0
             }
+
+    def _fallback_parse_recommendations(self, prompt: str) -> list:
+        """Fallback method when structured output fails"""
+        try:
+            json_prompt = f"""
+            {prompt}
+            
+            Respond with a JSON array of recommendations. Each recommendation should have:
+            - recommendation_type: string
+            - title: string
+            - content: string
+            - score: number (1-10)
+            - reason: string
+            - status: "pending"
+            - shown_at: ISO timestamp
+            
+            Format: [{{...}}, {{...}}, {{...}}]
+            """
+            
+            response = self.llm.invoke(json_prompt)
+            content = response.content.strip()
+            
+            if content.startswith('```json'):
+                content = content.replace('```json', '').replace('```', '').strip()
+            elif content.startswith('```'):
+                content = content.replace('```', '').strip()
+            
+            recommendations = json.loads(content)
+            
+            valid_recommendations = []
+            for rec in recommendations:
+                if isinstance(rec, dict) and rec.get('title') and rec.get('content'):
+                    cleaned_rec = {
+                        "recommendation_type": rec.get('recommendation_type', 'general'),
+                        "title": rec.get('title'),
+                        "content": rec.get('content'),
+                        "score": min(max(int(rec.get('score', 5)), 1), 10),
+                        "reason": rec.get('reason', ''),
+                        "status": "pending",
+                        "shown_at": rec.get('shown_at', datetime.now().isoformat())
+                    }
+                    valid_recommendations.append(cleaned_rec)
+            
+            print(f"✅ Parsed {len(valid_recommendations)} recommendations using fallback")
+            return valid_recommendations
+            
+        except Exception as e:
+            print(f"❌ Error in fallback parsing: {e}")
+            return []
 
     def _format_activity_analysis(self, analyses: list) -> str:
         """Format activity analysis data for LLM"""
@@ -96,8 +191,8 @@ class RecommendationEngine:
                 "preferred_time": analysis.get('preferred_time'),
                 "frequency_per_week": analysis.get('frequency_per_week'),
                 "frequency_per_month": analysis.get('frequency_per_month'),
-                "daily_pattern": analysis.get('daily_pattern', {}),
-                "last_updated": str(analysis.get('last_updated'))
+                "last_updated": str(analysis.get('last_updated')),
+                "description": analysis.get('description', 'No description provided')
             })
         
         return json.dumps(formatted_data, indent=2)
@@ -120,101 +215,54 @@ class RecommendationEngine:
         
         return json.dumps(formatted_data, indent=2)
 
-    def _parse_recommendations(self, response_content: str) -> list:
-        """Parse LLM response to extract recommendations"""
-        try:
-            # Clean response content
-            content = response_content.strip()
-            
-            # Try to extract JSON objects from response
-            recommendations = []
-            
-            # Look for JSON blocks in the response
-            import re
-            json_pattern = r'\{[^{}]*\}'
-            matches = re.finditer(json_pattern, content, re.DOTALL)
-            
-            for match in matches:
-                try:
-                    recommendation_data = json.loads(match.group())
-                    
-                    # Validate required fields
-                    if all(key in recommendation_data for key in ['title', 'message', 'priority']):
-                        # Add default values for missing fields
-                        recommendation = {
-                            "title": recommendation_data.get('title'),
-                            "message": recommendation_data.get('message'),
-                            "priority": recommendation_data.get('priority', 'medium'),
-                            "category": recommendation_data.get('category', 'general'),
-                            "action_time": recommendation_data.get('action_time'),
-                            "related_activity": recommendation_data.get('related_activity'),
-                            "related_event": recommendation_data.get('related_event')
-                        }
-                        recommendations.append(recommendation)
-                        
-                except json.JSONDecodeError:
-                    continue
-            
-            # If no JSON found, try to parse as a list
-            if not recommendations:
-                try:
-                    parsed_response = json.loads(content)
-                    if isinstance(parsed_response, list):
-                        recommendations = parsed_response
-                except json.JSONDecodeError:
-                    print("⚠️ Could not parse recommendations as JSON")
-            
-            print(f"✅ Parsed {len(recommendations)} recommendations")
-            return recommendations
-            
-        except Exception as e:
-            print(f"❌ Error parsing recommendations: {e}")
-            return []
-
     def _create_alerts_from_recommendations(self, recommendations: list) -> int:
-        """Create system alerts from high/medium priority recommendations"""
+        """Create system alerts from high-score recommendations"""
         created_count = 0
         
         for rec in recommendations:
             try:
-                priority = rec.get('priority', 'low').lower()
+                score = rec.get('score', 0)
                 
-                # Only create alerts for high and medium priority
-                if priority in ['high', 'medium']:
-                    # Check if similar alert already exists
-                    if not alert_exists(rec.get('title'), 'system'):
-                        
-                        # Calculate alert time
-                        action_time = rec.get('action_time')
-                        if action_time:
+                if score >= 7:
+                    title = rec.get('title', '')
+                    
+                    if not alert_exists(title, 'system'):
+                        shown_at = rec.get('shown_at')
+                        if shown_at:
                             try:
-                                alert_time = datetime.fromisoformat(action_time.replace('Z', '+00:00'))
-                            except:
-                                alert_time = datetime.now() + timedelta(hours=1)
+                                if isinstance(shown_at, str):
+                                    if 'T' in shown_at:
+                                        trigger_time = datetime.fromisoformat(shown_at.replace('Z', '+00:00'))
+                                    else:
+                                        trigger_time = datetime.fromisoformat(shown_at)
+                                else:
+                                    trigger_time = datetime.now() + timedelta(minutes=30)
+                            except Exception as parse_error:
+                                print(f"⚠️ Error parsing shown_at time: {parse_error}")
+                                trigger_time = datetime.now() + timedelta(minutes=30)
                         else:
-                            alert_time = datetime.now() + timedelta(hours=1)
+                            trigger_time = datetime.now() + timedelta(minutes=30)
                         
-                        # Create alert
                         alert_data = {
-                            "title": rec.get('title'),
-                            "message": rec.get('message'),
-                            "alert_time": alert_time,
-                            "priority": priority,
-                            "alert_type": 'system',
-                            "metadata": {
-                                "category": rec.get('category'),
-                                "related_activity": rec.get('related_activity'),
-                                "related_event": rec.get('related_event')
-                            }
+                            "alert_type": "system",
+                            "title": title,
+                            "message": rec.get('content', ''),
+                            "trigger_time": trigger_time,
+                            "recurrence": "once",
+                            "priority": "high" if score >= 9 else "medium",
+                            "status": "pending",
+                            "source": "recommendation"
                         }
                         
                         alert_id = create_system_alert(alert_data)
                         if alert_id:
                             created_count += 1
-                            print(f"✅ Created alert: {rec.get('title')}")
+                            print(f"✅ Created alert: {title} (Score: {score})")
+                    else:
+                        print(f"⚠️ Alert already exists: {title}")
                 
             except Exception as e:
-                print(f"❌ Error creating alert for recommendation: {e}")
+                print(f"❌ Error creating alert for recommendation! {e}")
                 continue
         
         return created_count
@@ -237,7 +285,7 @@ class RecommendationEngine:
             
             # Create focused prompt
             focused_prompt = f"""
-            Generate specific recommendations for the activity type: "{activity_type}"
+            Generate 2-3 specific recommendations for the activity type: "{activity_type}"
             
             Activity Analysis:
             {json.dumps(analysis, indent=2)}
@@ -251,11 +299,33 @@ class RecommendationEngine:
             3. Conflict avoidance with events
             4. Improvement suggestions
             
-            Provide 2-4 specific recommendations for this activity.
+            Each recommendation should be specific to this activity type and include actionable advice.
             """
             
-            response = self.llm.invoke(focused_prompt)
-            recommendations = self._parse_recommendations(response.content)
+            # Use structured output
+            try:
+                structured_llm = self.llm.with_structured_output(
+                    Recommendation,
+                    method="function_calling"
+                )
+                
+                recommendations = []
+                for i in range(3):  # Generate up to 3 specific recommendations
+                    try:
+                        response = structured_llm.invoke(f"{focused_prompt}\n\nGenerate specific recommendation #{i+1}:")
+                        
+                        if response and hasattr(response, 'model_dump'):
+                            rec_data = response.model_dump()
+                            if rec_data.get('title') and rec_data.get('content'):
+                                recommendations.append(rec_data)
+                                
+                    except Exception as e:
+                        print(f"⚠️ Error generating specific recommendation {i+1}: {e}")
+                        continue
+                
+            except Exception as struct_error:
+                print(f"⚠️ Structured output failed for activity-specific: {struct_error}")
+                recommendations = self._fallback_parse_recommendations(focused_prompt)
             
             return {
                 "success": True,

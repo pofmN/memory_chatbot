@@ -175,9 +175,9 @@ def create_activity_analysis(analysis_data: Dict) -> Optional[int]:
                 cur.execute("""
                     INSERT INTO activities_analysis (
                         activity_type, preferred_time, 
-                        frequency_per_week, frequency_per_month, last_updated
+                        frequency_per_week, frequency_per_month, last_updated, description
                     )
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     analysis_data["activity_type"],
@@ -185,6 +185,7 @@ def create_activity_analysis(analysis_data: Dict) -> Optional[int]:
                     analysis_data.get("frequency_per_week", 0),
                     analysis_data.get("frequency_per_month", 0),
                     datetime.now(),
+                    analysis_data.get("description", "No description provided")
                 ))
                 analysis_id = cur.fetchone()[0]
                 conn.commit()
@@ -193,6 +194,27 @@ def create_activity_analysis(analysis_data: Dict) -> Optional[int]:
         except psycopg2.Error as e:
             print(f"Error creating activity analysis: {e}")
             conn.rollback()
+            return None
+        finally:
+            conn.close()
+    return None
+
+def get_activity_analysis(activity_type: str) -> Optional[Dict]:
+    """Get activity analysis by type"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM activities_analysis 
+                    WHERE activity_type = %s
+                    ORDER BY last_updated DESC
+                    LIMIT 1
+                """, (activity_type,))
+                result = cur.fetchone()
+                return dict(result) if result else None
+        except psycopg2.Error as e:
+            print(f"Error getting activity analysis: {e}")
             return None
         finally:
             conn.close()
@@ -208,7 +230,7 @@ def update_activity_analysis(analysis_id: int, analysis_data: Dict) -> bool:
                 cur.execute("""
                     UPDATE activities_analysis 
                     SET activity_type = %s, preferred_time = %s, 
-                        frequency_per_week = %s, frequency_per_month = %s, last_updated = %s
+                        frequency_per_week = %s, frequency_per_month = %s, last_updated = %s, description = %s
                     WHERE id = %s
                 """, (
                     analysis_data["activity_type"],
@@ -216,6 +238,7 @@ def update_activity_analysis(analysis_id: int, analysis_data: Dict) -> bool:
                     analysis_data.get("frequency_per_week", 0),
                     analysis_data.get("frequency_per_month", 0),
                     datetime.now(),
+                    analysis_data.get("description", "No description provided"),
                     analysis_id
                 ))
                 conn.commit()
@@ -231,45 +254,25 @@ def update_activity_analysis(analysis_id: int, analysis_data: Dict) -> bool:
             conn.close()
     return False
 
-def get_all_activity_analysis(activity_type: str) -> Optional[Dict]:
-    conn = db.get_connection()
-    if conn:
-        try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("""
-                    SELECT * FROM activities_analysis 
-                    WHERE activity_type = %s
-                """, (activity_type,))
-                row = cur.fetchone()
-                if row:
-                    return dict(row)
-                else:
-                    print(f"⚠️ No analysis found for activity type: {activity_type}")
-                    return None
-        except psycopg2.Error as e:
-            print(f"Error getting activity analysis: {e}")
-            return None
-        finally:
-            conn.close()
-    return None
-
-def get_all_activity_analyses() -> List[Dict]:
+def get_all_activity_analysis() -> List[Dict]:
     """Get all activity analyses"""
     conn = db.get_connection()
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    SELECT * FROM activities_analysis 
+                    SELECT * FROM activities_analysis
                     ORDER BY last_updated DESC
                 """)
-                return [dict(row) for row in cur.fetchall()]
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
         except psycopg2.Error as e:
-            print(f"Error getting activity analyses: {e}")
+            print(f"Error getting all activity analyses: {e}")
             return []
         finally:
             conn.close()
     return []
+
 
 def delete_activity_analysis(analysis_id: int) -> bool:
     """Delete activity analysis record"""
@@ -294,8 +297,6 @@ def delete_activity_analysis(analysis_id: int) -> bool:
             conn.close()
     return False
 
-
-
 def get_upcoming_events(days: int = 7) -> List[Dict]:
     """Get upcoming events within specified days"""
     conn = db.get_connection()
@@ -304,7 +305,7 @@ def get_upcoming_events(days: int = 7) -> List[Dict]:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 end_date = datetime.now() + timedelta(days=days)
                 cur.execute("""
-                    SELECT * FROM events 
+                    SELECT * FROM event
                     WHERE start_time BETWEEN NOW() AND %s
                     ORDER BY start_time ASC
                 """, (end_date,))
@@ -315,6 +316,92 @@ def get_upcoming_events(days: int = 7) -> List[Dict]:
         finally:
             conn.close()
     return []
+
+def create_recommendation(recommendation_data: List[Dict]) -> Optional[int]:
+    """Create recommendations in batch"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                created_count = 0
+                for rec in recommendation_data:
+                    cur.execute("""
+                        INSERT INTO recommendation (
+                            recommendation_type, title, content, score, reason, status, created_at
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        rec.get('recommendation_type', 'general'),
+                        rec.get('title'),
+                        rec.get('content'),
+                        rec.get('score', 0),
+                        rec.get('reason', ''),
+                        rec.get('status', 'pending'),
+                        datetime.now()
+                    ))
+                    created_count += 1
+                
+                conn.commit()
+                print(f"✅ Created {created_count} recommendations")
+                return created_count
+        except psycopg2.Error as e:
+            print(f"Error creating recommendations: {e}")
+            conn.rollback()
+            return None
+        finally:
+            conn.close()
+    return None
+
+def create_system_alert(alert_data: Dict) -> Optional[int]:
+    """Create a system alert in the database"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO alert (alert_type, title, message, trigger_time, priority, status, source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING alert_id
+                """, (
+                    alert_data.get("alert_type", "system"),
+                    alert_data.get("title"),
+                    alert_data.get("message"),
+                    alert_data.get("trigger_time", datetime.now()),
+                    alert_data.get("priority", "medium"),
+                    alert_data.get("status", "pending"),
+                    alert_data.get("source", "recommendation")
+                ))
+                
+                alert_id = cur.fetchone()[0]
+                conn.commit()
+                print(f"✅ Created alert with ID: {alert_id}")
+                return alert_id
+        except psycopg2.Error as e:
+            print(f"❌ Error creating alert: {e}")
+            conn.rollback()
+            return None
+        finally:
+            conn.close()
+    return None
+
+def alert_exists(title: str, alert_type: str) -> bool:
+    """Check if alert already exists"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*) FROM alert 
+                    WHERE title = %s AND alert_type = %s AND status = 'pending'
+                """, (title, alert_type))
+                count = cur.fetchone()[0]
+                return count > 0
+        except psycopg2.Error as e:
+            print(f"Error checking alert existence: {e}")
+            return False
+        finally:
+            conn.close()
+    return False
 
 def get_event_conflicts(hours_ahead: int = 24) -> List[dict]:
     """Get overlapping events in the next specified hours"""
@@ -382,79 +469,21 @@ def get_today_events() -> List[dict]:
             conn.close()
     return []
 
-def create_system_alert(alert_data: Dict) -> bool:
-    """Create a system alert in the database"""
-    try:
-        conn = db.get_connection()
-        if conn:
-            with conn.cursor() as cur:
-                # Insert alert using your existing schema
-                cur.execute("""
-                    INSERT INTO alert (alert_type, title, message, trigger_time, priority, status)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                    alert_data["type"],
-                    alert_data["title"],
-                    alert_data["message"],
-                    alert_data.get("trigger_time", datetime.now()),
-                    alert_data["priority"],
-                    alert_data.get("status", "active")
-                ))
-                
-                success = cur.rowcount > 0
-                conn.commit()
-                
-                if success:
-                    print(f"🔔 Created alert: {alert_data['title']}")
-                
-                return success
-        return False
-    except psycopg2.Error as e:
-        print(f"❌ Error creating alert: {e}")
-        if conn:
-            conn.rollback()
-        return False
-    finally:
-        if conn:
-            conn.close()
-
-def alert_exists(alert_type: str, title: str, hours_back: int = 24) -> bool:
-    """Check if a similar alert already exists"""
-    try:
-        conn = db.get_connection()
-        if conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT 1 FROM alert 
-                    WHERE alert_type = %s AND title = %s 
-                    AND created_at > NOW() - INTERVAL '%s hours'
-                    AND status = 'active'
-                """, (alert_type, title, hours_back))
-                
-                exists = cur.fetchone() is not None
-                return exists
-    except psycopg2.Error as e:
-        print(f"❌ Error checking alert existence: {e}")
-    finally:
-        if conn:
-            conn.close()
-    return False
-
-def get_active_alerts(limit: int = 10) -> List[Dict]:
-    """Get active alerts"""
+def get_pending_alerts(limit: int = 10) -> List[Dict]:
+    """Get pending alerts"""
     conn = db.get_connection()
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT * FROM alert 
-                    WHERE status = 'active'
+                    WHERE status = 'pending'
                     ORDER BY created_at DESC 
                     LIMIT %s
                 """, (limit,))
                 return [dict(row) for row in cur.fetchall()]
         except psycopg2.Error as e:
-            print(f"Error getting active alerts: {e}")
+            print(f"Error getting pending alerts: {e}")
             return []
         finally:
             conn.close()
@@ -479,26 +508,62 @@ def get_all_alerts(limit: int = 50) -> List[Dict]:
             conn.close()
     return []
 
-def mark_alert_read(alert_id: int) -> bool:
-    """Mark an alert as read"""
+def get_due_alerts() -> List[Dict]:
+    """Get alerts that are due to be triggered"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM alert 
+                    WHERE status = 'pending' 
+                    AND trigger_time <= NOW()
+                    ORDER BY priority DESC, trigger_time ASC
+                """)
+                return [dict(row) for row in cur.fetchall()]
+        except psycopg2.Error as e:
+            return []
+        finally:
+            conn.close()
+    return []
+
+def update_alert_status(alert_id: int, status: str) -> bool:
+    """Update alert status"""
     conn = db.get_connection()
     if conn:
         try:
             with conn.cursor() as cur:
                 cur.execute("""
                     UPDATE alert 
-                    SET status = 'read'
+                    SET status = %s 
                     WHERE alert_id = %s
-                """, (alert_id,))
+                """, (status, alert_id))
                 conn.commit()
                 return cur.rowcount > 0
         except psycopg2.Error as e:
-            print(f"Error marking alert as read: {e}")
-            conn.rollback()
-            return False
+            return e
         finally:
             conn.close()
     return False
+
+def get_active_alerts(limit: int = 10) -> List[Dict]:
+    """Get active alerts"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM alert 
+                    WHERE status = 'pending'
+                    ORDER BY priority DESC, created_at DESC 
+                    LIMIT %s
+                """, (limit,))
+                return [dict(row) for row in cur.fetchall()]
+        except psycopg2.Error as e:
+            return []
+        finally:
+            conn.close()
+    return []
 
 def mark_alert_resolved(alert_id: int) -> bool:
     """Mark an alert as resolved"""
@@ -574,7 +639,7 @@ def get_alerts_by_priority(priority: str, limit: int = 20) -> List[Dict]:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT * FROM alert 
-                    WHERE priority = %s AND status = 'active'
+                    WHERE priority = %s AND status = 'pending'
                     ORDER BY created_at DESC 
                     LIMIT %s
                 """, (priority, limit))

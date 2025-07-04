@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from core.base.storage import DatabaseManager
 from core.base.schema import UserInformation
-from agent.extract_user_info_agent.prompt import EXTRACT_USER_INFORMATION_PROMPT
+from agent.extract_user_info.prompt import EXTRACT_USER_INFORMATION_PROMPT
 
 class UserInfoState(TypedDict):
     """State for user information extraction"""
