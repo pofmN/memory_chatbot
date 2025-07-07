@@ -327,9 +327,9 @@ def create_recommendation(recommendation_data: List[Dict]) -> Optional[int]:
                 for rec in recommendation_data:
                     cur.execute("""
                         INSERT INTO recommendation (
-                            recommendation_type, title, content, score, reason, status, created_at
+                            recommendation_type, title, content, score, reason, status, shown_at, created_at
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         rec.get('recommendation_type', 'general'),
                         rec.get('title'),
@@ -337,6 +337,7 @@ def create_recommendation(recommendation_data: List[Dict]) -> Optional[int]:
                         rec.get('score', 0),
                         rec.get('reason', ''),
                         rec.get('status', 'pending'),
+                        rec.get('shown_at', None),
                         datetime.now()
                     ))
                     created_count += 1
@@ -351,6 +352,30 @@ def create_recommendation(recommendation_data: List[Dict]) -> Optional[int]:
         finally:
             conn.close()
     return None
+
+def update_recommendation_status(recommendation_id: int, status: str) -> bool:
+    """Update recommendation status"""
+    conn = db.get_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE recommendation 
+                    SET status = %s,
+                    WHERE id = %s
+                """, (status, recommendation_id))
+                conn.commit()
+                success = cur.rowcount > 0
+                if success:
+                    print(f"✅ Updated recommendation {recommendation_id} status to: {status}")
+                return success
+        except psycopg2.Error as e:
+            print(f"Error updating recommendation status: {e}")
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+    return False
 
 def create_system_alert(alert_data: Dict) -> Optional[int]:
     """Create a system alert in the database"""
@@ -509,19 +534,20 @@ def get_all_alerts(limit: int = 50) -> List[Dict]:
     return []
 
 def get_due_alerts() -> List[Dict]:
-    """Get alerts that are due to be triggered"""
+    """Get alerts for events that are upcoming in 30 minutes"""
     conn = db.get_connection()
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    SELECT * FROM alert 
-                    WHERE status = 'pending' 
-                    AND trigger_time <= NOW()
+                    SELECT * FROM alert
+                    WHERE status = 'pending'
+                    AND trigger_time BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
                     ORDER BY priority DESC, trigger_time ASC
                 """)
                 return [dict(row) for row in cur.fetchall()]
         except psycopg2.Error as e:
+            print(f"Error getting due alerts: {e}")
             return []
         finally:
             conn.close()

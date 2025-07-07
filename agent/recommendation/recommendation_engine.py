@@ -55,7 +55,7 @@ Focus on actionable, personalized suggestions that help optimize the user's sche
         try:
             activity_analyses = get_all_activity_analysis()
             
-            upcoming_events = get_upcoming_events(days=7)
+            upcoming_events = get_upcoming_events(days=1)
             
             if not activity_analyses and not upcoming_events:
                 return {
@@ -72,15 +72,15 @@ Focus on actionable, personalized suggestions that help optimize the user's sche
                 activity_analysis=activity_data,
                 upcoming_events=event_data
             )
-            
+
             try:
                 structured_llm = self.llm.with_structured_output(
                     Recommendation,
                     method="function_calling"
                 )
-                
+
                 recommendations = []
-                for i in range(5):
+                for i in range(4):
                     try:
                         response = structured_llm.invoke(f"{prompt}\n\nGenerate recommendation #{i+1}:")
                         rec_data = response.model_dump()
@@ -91,7 +91,7 @@ Focus on actionable, personalized suggestions that help optimize the user's sche
                     except Exception as e:
                         print(f"⚠️ Error generating recommendation {i+1}: {e}")
                         continue
-    
+
                 if recommendations:
                     rec_count = create_recommendation(recommendations)
                     print(f"✅ Saved {rec_count} recommendations to database")

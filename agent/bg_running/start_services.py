@@ -32,13 +32,12 @@ def main():
     print("🔔 Press Ctrl+C to stop the service")
     
     try:
-        # Keep the main thread alive
         while True:
-            time.sleep(60)  # Check every minute
             status = get_service_status()
             if not status['running']:
                 print("⚠️ Service stopped unexpectedly, restarting...")
                 start_alert_service()
+            time.sleep(60)
     except KeyboardInterrupt:
         print("\n🛑 Service stopped by user")
         stop_alert_service()
