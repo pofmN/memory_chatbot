@@ -36,16 +36,11 @@ class RecommendationEngine:
 Based on this data, generate 3-5 personalized recommendations. Each recommendation should include:
 - recommendation_type: Type of recommendation (activity, event, alert, optimization, habit)
 - title: Brief, clear title (max 50 characters)
-- content: Detailed description with actionable advice
+- content: Detailed description with actionable advice, shouldn't be too long
 - score: Relevance score (1-10, where 10 is most important)
 - reason: Why this recommendation is suggested
 - status: Always set to "pending"
 - shown_at: When this recommendation should be shown (ISO format, e.g., "2024-01-15T10:30:00")
-
-For shown_at, consider:
-- Urgent recommendations: within 30 minutes
-- Important recommendations: within 2-4 hours
-- General recommendations: within 24 hours
 
 Focus on actionable, personalized suggestions that help optimize the user's schedule and habits.
 """

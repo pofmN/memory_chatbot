@@ -104,8 +104,7 @@ Use the context to better understand relative time references and implicit infor
 
             system_prompt = UPDATE_EVENT_PROMPT
             prompt = f"""{system_prompt}
-Based on the current conversation context and user profile, 
-extract event information from the user input. to update the existing events.s
+Here is current information of the events:
 Current date/time: {current_datetime}
 User timezone: {user_timezone}
 Previous conversation context: {current_context}
@@ -359,7 +358,6 @@ Use the context to better understand relative time references and implicit infor
             "end": END
         })
         
-        # All other flows go directly to END
         graph.add_edge("save", END)
         graph.add_edge("update", END)
         graph.add_edge("search", END)
@@ -368,13 +366,11 @@ Use the context to better understand relative time references and implicit infor
     
     def _parse_datetime(self, datetime_str: str) -> datetime:
         """Parse various datetime formats to datetime object"""
-        # Try ISO format first
         try:
             return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
         except:
             pass
         
-        # Try common formats
         formats = [
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%d %H:%M",

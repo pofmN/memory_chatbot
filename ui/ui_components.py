@@ -289,7 +289,8 @@ def render_database_status(db):
         conn = db.get_connection()
         if conn:
             conn.close()
-            st.success("✅ Database Connected")
+            #st.success("✅ Database Connected")
+            # print("✅ Database Connected")
         else:
             st.error("❌ Database Connection Failed")
     except:

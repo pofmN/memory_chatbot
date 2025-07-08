@@ -82,14 +82,6 @@ Based on this data, provide analysis in the following format:
 """
 
 RECOMMENDATION_PROMPT = """
-You are an intelligent assistant tasked with providing personalized activity recommendations based on user preferences, user activities and past activities. 
-Your goal is to analyze the user's activity history and suggest new activities that align with their interests and habits. Also base on upcoming events of user
-to give recommendations for upcoming events. 
-
-Generate 3-7 recommendations based on the analysis. Focus on actionable, personalized suggestions.
-"""
-
-RECOMMENDATION_PROMPT = """
 You are an intelligent personal assistant that creates personalized recommendations by analyzing user activity patterns and upcoming events.
 
 ## Your Task:

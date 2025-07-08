@@ -8,6 +8,7 @@ from core.base.storage import DatabaseManager
 from langchain_openai import ChatOpenAI
 from agent.recommendation.services import update_alert_status
 import uuid
+
 # Load environment variables
 load_dotenv()
 openai_api = os.environ.get("OPENAI_API_KEY")
@@ -112,13 +113,36 @@ llm = ChatOpenAI(
 # user_activity_info = add_activity_information(user_input)
 # print(f"User Activity Info: {user_activity_info}")
 
-status = "sent"
-alert_id = 25
+from desktop_notifier import DesktopNotifier
+import random
+import asyncio  # 1. Import the asyncio library
+from desktop_notifier import DesktopNotifier
 
-update_rows = update_alert_status(alert_id, status)
-print(f"Updating alert status for ID: {alert_id} to '{status}'...")
-print(f"Rows updated: {update_rows}")
-if update_rows > 0:
-    print(f"✅ Alert status updated to '{status}' for ID: {alert_id}")
-else:
-    print(f"⚠️ No rows updated for alert ID: {alert_id}, it may already be {status}")
+# 2. Change the function definition to be async
+async def show_daily_recommendation():
+    """
+    Displays a notification using the desktop-notifier library.
+    """
+    recommendations = [
+        "Take a 5-minute break to stretch.",
+        "Review your top priority for the day.",
+        "Drink a glass of water.",
+        "Think of one thing you're grateful for.",
+        "Close unused tabs and apps."
+    ]
+    
+    message = random.choice(recommendations)
+    title = "Daily Recommendation ✨"
+    
+    try:
+        notifier = DesktopNotifier()
+        # 3. Add the 'await' keyword before calling send()
+        await notifier.send(title=title, message=message)
+        print("Notification sent successfully.")
+    except Exception as e:
+        print(f"Failed to send notification. Error: {e}")
+
+
+def test_alert(title: str, message: str):
+    """Test function to send an alert notification."""
+    asyncio.run(show_daily_recommendation())

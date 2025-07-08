@@ -7,7 +7,8 @@ import time
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-import smtplib
+import asyncio
+from desktop_notifier import DesktopNotifier
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -33,13 +34,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
-
-def display_alert():
-    try:
-        st.toast(" Creating test alert...", icon="🔔")
-    except Exception as e:
-        st.error(f"❌ Error creating test alert: {e}")
-        return None
 
 class BackgroundAlertService:
     """Background service for managing alerts and recommendations"""
@@ -72,7 +66,7 @@ class BackgroundAlertService:
         """Main service loop"""
         while self.running:
             try:
-                self._generate_periodic_recommendations()
+                #self._generate_periodic_recommendations()
                 print("🔄 Checking for due alerts...")
 
                 self._process_due_alerts()
@@ -95,80 +89,37 @@ class BackgroundAlertService:
                 logger.info(f"📋 Found {len(due_alerts)} upcoming alert in 30 minutes")
                 
                 for alert in due_alerts:
-                    self._create_browser_notification(alert)
-                    time.sleep(60)  # moi alert cach 10 phut
+                    asyncio.run(self._create_browser_notification(alert))
+                    time.sleep(5)
             else:
-                logger.info("✅ No due alerts found")
-                print("❌ No due alerts found")
+                logger.info("❌ No due alerts found")
                     
         except Exception as e:
             logger.error(f"❌ Error processing due alerts: {e}")
     
-    def _create_browser_notification(self, alert: Dict):
+    async def _create_browser_notification(self, alert: Dict):
         """Create browser notification and updating alert status"""
         try:
             alert_id = alert.get('alert_id')
             logger.info(f"🔔 Alert: {alert.get('title', 'System Alert')} - {alert.get('message', '')}")
             
-            update_rows = update_alert_status(alert_id, 'sent')
-            if update_rows:
-                logger.info(f"✅ Alert status updated for ID: {alert_id}")
-            else:
-                logger.warning(f"⚠️ No rows updated for alert ID: {alert_id}, it may already be sent")
-            
-            logger.info(f"📱 Alert marked as sent for browser display: {alert_id}")
+            # update_rows = update_alert_status(alert_id, 'sent')
+            # if update_rows:
+            #     logger.info(f"✅ Alert status updated for ID: {alert_id}")
+            # else:
+            #     logger.warning(f"⚠️ No rows updated for alert ID: {alert_id}, it may already be sent")
+            try:
+                notifier = DesktopNotifier()
+                # 3. Add the 'await' keyword before calling send()
+                await notifier.send(title=alert.get('title', 'System Alert'), message=alert.get('message', ''))
+                print("Notification sent successfully.")
+            except Exception as e:
+                print(f"Failed to send notification. Error: {e}")
+
             
         except Exception as e:
             logger.error(f"❌ Error updating alert status for browser notification: {e}")
 
-    
-    def _send_email_notification(self, alert: Dict):
-        """Send email notification if configured"""
-        try: 
-            # Email configuration
-            smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-            smtp_port = int(os.getenv('SMTP_PORT', '587'))
-            sender_email = os.getenv('SENDER_EMAIL', '')
-            sender_password = os.getenv('SENDER_PASSWORD', '')
-            recipient_email = os.getenv('RECIPIENT_EMAIL', '')
-            
-            if not all([sender_email, sender_password, recipient_email]):
-                logger.debug("📧 Email configuration incomplete, skipping email notification")
-                return
-            
-            # Create message
-            message = MIMEMultipart()
-            message["From"] = sender_email
-            message["To"] = recipient_email
-            message["Subject"] = f"📋 Tip of the Day: {alert.get('title', 'System Alert')}"
-            
-            # Email body
-            body = f"""
-            <html>
-            <body>
-                <h2>💡 Daily Tip & Recommendation</h2>
-                <p><strong>Title:</strong> {alert.get('title', 'No title')}</p>
-                <p><strong>Message:</strong> {alert.get('message', 'No message')}</p>
-                <p><strong>Priority:</strong> {alert.get('priority', 'medium')}</p>
-                <p><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <hr>
-                <p><small>This is an automated message from your Personal Assistant</small></p>
-            </body>
-            </html>
-            """
-            
-            message.attach(MIMEText(body, "html"))
-            
-            # Send email
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.starttls()
-                server.login(sender_email, sender_password)
-                server.send_message(message)
-                
-            logger.info(f"📧 Email notification sent for alert: {alert['alert_id']}")
-            
-        except Exception as e:
-            logger.error(f"❌ Error sending email notification: {e}")
     
     def _generate_periodic_recommendations(self):
         """Generate new recommendations periodically"""

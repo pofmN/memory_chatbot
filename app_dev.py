@@ -1,9 +1,11 @@
 import streamlit as st
 import os
+import logging
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 import time
 from core.base.storage import DatabaseManager
+from test_mcp_tools import test_alert
 from ui.ui_components import (
     initialize_session_state, 
     render_sidebar, 
@@ -17,15 +19,14 @@ from core.base.mcp_client import (
     initialize_session, 
     initialize_messages
 )
+
+from agent.bg_running.background_alert_service import (
+    start_alert_service,
+    alert_service
+)
+
 from core.base.setup_graph import setup_graph
 
-# Import background alert service
-from agent.bg_running.background_alert_service import (
-    start_alert_service, 
-    stop_alert_service, 
-    get_service_status,
-    display_alert
-)
 
 # Load environment variables
 load_dotenv()
@@ -54,12 +55,22 @@ def init_components():
     )
     return db, llm
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 def initialize_alert_service():
-    """Initialize the background alert service"""
+    """Initialize the background alert service with Streamlit session"""
     if "alert_service_started" not in st.session_state:
         try:
             start_alert_service()
-            print("🚀 Background Alert Service started successfully!")
             st.session_state.alert_service_started = True
             st.success("🚀 Background Alert Service started successfully!")
         except Exception as e:
@@ -75,20 +86,19 @@ def main():
     initialize_session(db)
     initialize_messages()
     
-    #initialize_alert_service()
+    initialize_alert_service()
     
     # Setup graph
     graph = setup_graph(db, llm)
     
-    # Render UI components
     render_sidebar()
-    
     
     render_header()
     
     render_session_info()
     render_chat_messages()
-    
+
+   
     if user_input := st.chat_input("Type your message here..."):
         #st.toast("💬 Processing your messageeeeeeee...", icon="🔄")
         st.session_state.messages.append({"role": "user", "content": user_input})
@@ -134,10 +144,9 @@ def main():
                 else:
                     st.error("❌ No response generated.")
 
-    st.button("Create Test Alert", on_click=lambda: display_alert(), key="create_test_alert")
     render_footer()
     render_database_status(db)
-
+    #st.button("Test Alert", on_click=test_alert("asdfqweqweqweqweq","qweqweqweq"), type="primary")
 
 if __name__ == "__main__":
     main()
