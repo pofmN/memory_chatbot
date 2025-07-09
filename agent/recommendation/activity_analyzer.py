@@ -111,13 +111,11 @@ class ActivityAnalyzer:
             tags = activity.get('tags', [])
             activity_name = activity.get('activity_name', '').lower().strip()
             if tags:
-                # Use tags to group activity
                 for tag in tags:
                     normalized_tag = tag.lower().strip()
                     groups[normalized_tag].append(activity)
                     
             elif activity_name:
-                # Normalize activity name and group by it
                 normalized_name = activity_name.lower().strip()
                 groups[normalized_name].append(activity)
         
@@ -138,14 +136,12 @@ class ActivityAnalyzer:
                 }
                 activities_summary.append(activity_info)
             
-            # Create prompt for LLM analysis
             activities_data = json.dumps(activities_summary, indent=2)
             prompt = self.analysis_prompt.format(
                 activity_type=activity_type,
                 activities_data=activities_data,
                 ACTIVITY_ANALYSIS_PROMPT=ACTIVITY_ANALYSIS_PROMPT
             )
-            
             try:
                 response = self.llm.with_structured_output(ActivityAnalysis).invoke(prompt)
                 if isinstance(response, ActivityAnalysis):
@@ -176,7 +172,6 @@ class ActivityAnalyzer:
                 "description": analysis_data.get("description", "No description provided")
             }
             
-            # Validate preferred_time
             valid_times = ["morning", "afternoon", "evening", "night", "mixed"]
             if cleaned["preferred_time"] not in valid_times:
                 cleaned["preferred_time"] = "mixed"
@@ -268,7 +263,6 @@ class ActivityAnalyzer:
                     print(f"🔄 Reset {reset_count} activities to pending status")
                 conn.close()
             
-            # Now analyze all pending activities
             return activity_analyzer.analyze_activities()
             
         except Exception as e:

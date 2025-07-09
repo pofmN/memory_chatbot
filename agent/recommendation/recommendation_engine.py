@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from langchain_openai import ChatOpenAI
 from agent.recommendation.services import (
     get_all_activity_analysis, get_upcoming_events, 
-    create_system_alert, alert_exists, create_recommendation
+    create_system_alert, alert_exists, create_recommendation, update_recommendation_status
 )
 from agent.recommendation.prompt import RECOMMENDATION_PROMPT
 from core.base.schema import Recommendation
@@ -33,16 +33,21 @@ class RecommendationEngine:
 ### Upcoming Events:
 {upcoming_events}
 
+##3 Current Date and Time:
+{current_datetime}
+
 Based on this data, generate 3-5 personalized recommendations. Each recommendation should include:
 - recommendation_type: Type of recommendation (activity, event, alert, optimization, habit)
 - title: Brief, clear title (max 50 characters)
-- content: Detailed description with actionable advice, shouldn't be too long
+- content: Detailed description with actionable advice, shouldn't be long
 - score: Relevance score (1-10, where 10 is most important)
 - reason: Why this recommendation is suggested
 - status: Always set to "pending"
 - shown_at: When this recommendation should be shown (ISO format, e.g., "2024-01-15T10:30:00")
 
 Focus on actionable, personalized suggestions that help optimize the user's schedule and habits.
+Consider user's events to create recommendations event that event is not happening in next hour if that event is importance.
+Pay attention to the timing of activities and events to ensure recommendations time are relevant and actionable.
 """
 
     def generate_recommendations(self) -> dict:
@@ -61,11 +66,13 @@ Focus on actionable, personalized suggestions that help optimize the user's sche
             
             activity_data = self._format_activity_analysis(activity_analyses)
             event_data = self._format_upcoming_events(upcoming_events)
-            
+            current_datetime = datetime.now().isoformat()
+
             prompt = self.recommendation_prompt.format(
                 RECOMMENDATION_PROMPT=RECOMMENDATION_PROMPT,
                 activity_analysis=activity_data,
-                upcoming_events=event_data
+                upcoming_events=event_data,
+                current_datetime=current_datetime
             )
 
             try:
@@ -99,6 +106,7 @@ Focus on actionable, personalized suggestions that help optimize the user's sche
             
             try:
                 created_alerts = self._create_alerts_from_recommendations(recommendations)
+                
             except Exception as alert_error:
                 print(f"⚠️ Error creating alerts from recommendations: {alert_error}")
                 created_alerts = 0

@@ -81,8 +81,8 @@ CREATE TABLE activities (
 -- Create activities_analysis table
 CREATE TABLE activities_analysis (
     id SERIAL PRIMARY PRIMARY_KEY,
-    activity_type VARCHAR(100) NOT NULL,  -- e.g., "jogging", "meeting"
-    preferred_time VARCHAR(20),          -- e.g., "morning", "evening"
+    activity_type VARCHAR(100) NOT NULL,
+    preferred_time VARCHAR(20),
     frequency_per_week INTEGER DEFAULT 0,
     frequency_per_month INTEGER DEFAULT 0,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

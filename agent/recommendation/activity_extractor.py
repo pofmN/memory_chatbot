@@ -16,7 +16,7 @@ class ActivityExtractor:
     def __init__(self):
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
-            temperature=0.1,  # Low temperature for extraction accuracy
+            temperature=0.1,
             api_key=os.environ.get("OPENAI_API_KEY"),
             base_url="https://warranty-api-dev.picontechnology.com:8443"
         )
@@ -44,7 +44,6 @@ class ActivityExtractor:
             else:
                 activities = [response.model_dump()]
             
-            # Filter out empty activities
             valid_activities = []
             for activity in activities:
                 if activity.get('activity_name'):
@@ -64,14 +63,13 @@ class ActivityExtractor:
         
         for activity in activities:
             try:
-                # Prepare activity data for database
                 activity_data = {
                     "activity_name": activity.get("activity_name"),
                     "description": activity.get("description"),
                     "start_at": self._parse_datetime(activity.get("start_at")),
                     "end_at": self._parse_datetime(activity.get("end_at")),
                     "tags": activity.get("tags", []),
-                    "status": "pending"  # ✅ Set initial status
+                    "status": "pending"
                 }
                 
                 activity_id = create_activity(activity_data)

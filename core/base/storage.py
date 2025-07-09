@@ -431,7 +431,6 @@ Comprehensive Summary:"""
     # ============================================================================
     # ALERTS MANAGEMENT (SIMPLIFIED)
     # ============================================================================
-
     def create_alert(self, alert_data: dict) -> Optional[int]:
         """Create a new alert"""
         conn = self.get_connection()

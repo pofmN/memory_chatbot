@@ -78,7 +78,7 @@ Based on this data, provide analysis in the following format:
       "frequency_per_month": 2,
       "description": "User has team meetings at various times, often related to work projects."
     }
- Provide analysis in EXACT JSON format (no markdown, no extra text)
+ Provide analysis in EXACT JSON format (no markdown, no extra text), field names is English, values is Vietnamese.
 """
 
 RECOMMENDATION_PROMPT = """
@@ -106,9 +106,8 @@ Analyze the user's activity patterns and upcoming events to generate intelligent
 - Identify potential conflicts or improvements
 - Provide personalized suggestions based on their data
 - Include Vietnamese context when relevant
+- Consider carefully user activity time and event time with current date time to give reasonable recommedation for alert in next hours, 
+each recommendation will be display each 20 minutes once.
 
-## Examples:
-- High-score (9): "Schedule conflict detected between gym and meeting"
-- Medium-score (6): "Consider moving jogging to morning for better consistency"
-- Low-score (3): "Try a new restaurant based on your dining patterns"
+Field names is English, values is Vietnamese.
 """

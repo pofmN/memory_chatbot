@@ -113,9 +113,8 @@ llm = ChatOpenAI(
 # user_activity_info = add_activity_information(user_input)
 # print(f"User Activity Info: {user_activity_info}")
 
-from desktop_notifier import DesktopNotifier
 import random
-import asyncio  # 1. Import the asyncio library
+import asyncio
 from desktop_notifier import DesktopNotifier
 
 # 2. Change the function definition to be async
