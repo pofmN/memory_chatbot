@@ -1,7 +1,8 @@
 import streamlit as st
 from typing import Dict, Any
 from core.base.storage import DatabaseManager
-
+import os
+           
 def generate_custom_system_prompt(personality: str, style: str, length: str, language: str, instructions: str) -> str:
     """Generate a custom system prompt based on user preferences"""
     
@@ -289,9 +290,9 @@ def render_database_status(db):
         conn = db.get_connection()
         if conn:
             conn.close()
-            #st.success("✅ Database Connected")
-            # print("✅ Database Connected")
+            st.success("✅ Database Connected")
+            print("✅ Database Connected")
         else:
-            st.error("❌ Database Connection Failed")
+            st.error("❌ Database Connection Failed From UI")
     except:
-        st.error("❌ Database Connection Failed")
+        st.error("❌ Database Connection Failed From UI")

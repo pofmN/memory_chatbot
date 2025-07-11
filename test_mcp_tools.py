@@ -115,13 +115,18 @@ llm = ChatOpenAI(
 
 import random
 import asyncio
-from desktop_notifier import DesktopNotifier
+from plyer import notification
+from desktop_notifier import DesktopNotifier # working solution
+from notifiers import notify
+import pync
+
 
 # 2. Change the function definition to be async
 async def show_daily_recommendation():
     """
     Displays a notification using the desktop-notifier library.
     """
+    print("Generating daily recommendation...")
     recommendations = [
         "Take a 5-minute break to stretch.",
         "Review your top priority for the day.",
@@ -132,16 +137,14 @@ async def show_daily_recommendation():
     
     message = random.choice(recommendations)
     title = "Daily Recommendation ✨"
-    
-    try:
-        notifier = DesktopNotifier()
-        # 3. Add the 'await' keyword before calling send()
-        await notifier.send(title=title, message=message)
-        print("Notification sent successfully.")
-    except Exception as e:
-        print(f"Failed to send notification. Error: {e}")
+    pync.notify(
+        title=title,
+        message=message,
+    )    
 
 
 def test_alert(title: str, message: str):
+    print(f"Test Alert - Title: {title}, Message: {message}")
     """Test function to send an alert notification."""
     asyncio.run(show_daily_recommendation())
+

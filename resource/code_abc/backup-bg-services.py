@@ -1,6 +1,7 @@
 import sys
 import streamlit as st
 import os
+import queue
 import threading
 import time
 import logging
@@ -8,6 +9,9 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import asyncio
 from desktop_notifier import DesktopNotifier
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from app_dev import display_browser_notifications
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -82,17 +86,19 @@ class BackgroundAlertService:
         """Process alerts that are due to be sent"""
         try:
             due_alerts = get_due_alerts()
+            
             if due_alerts:
                 logger.info(f"📋 Found {len(due_alerts)} upcoming alert in 30 minutes")
+                
                 for alert in due_alerts:
                     asyncio.run(self._create_browser_notification(alert))
-                    time.sleep(2)
+                    time.sleep(5)
             else:
                 logger.info("❌ No due alerts found")
+                    
         except Exception as e:
             logger.error(f"❌ Error processing due alerts: {e}")
-
-
+    
     async def _create_browser_notification(self, alert: Dict):
         """Create browser notification and updating alert status"""
         try:
@@ -105,8 +111,10 @@ class BackgroundAlertService:
             # else:
             #     logger.warning(f"⚠️ No rows updated for alert ID: {alert_id}, it may already be sent")
             try:
-                notifier = DesktopNotifier()
-                await notifier.send(title=alert.get('title', 'System Alert'), message=alert.get('message', ''))
+                display_browser_notifications()
+                # notifier = DesktopNotifier()
+                # # 3. Add the 'await' keyword before calling send()
+                # await notifier.send(title=alert.get('title', 'System Alert'), message=alert.get('message', ''))
                 print("Notification sent successfully.")
             except Exception as e:
                 print(f"Failed to send notification. Error: {e}")
@@ -115,56 +123,6 @@ class BackgroundAlertService:
         except Exception as e:
             logger.error(f"❌ Error updating alert status for browser notification: {e}")
 
-
-    def send_alert_to_all_tokens(title: str, message: str, priority: str = "normal"):
-        """Send alert to all active FCM tokens"""
-        try:
-            # Get all active tokens from database
-            conn = db.get_connection()
-            if not conn:
-                print("❌ Database connection failed")
-                return False
-                
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT token FROM fcm_tokens 
-                    WHERE is_active = true
-                """)
-                
-                tokens = [row[0] for row in cur.fetchall()]
-                
-            conn.close()
-            
-            if not tokens:
-                print("❌ No active FCM tokens found")
-                return False
-                
-            # Send to FCM service
-            import requests
-            fcm_service_url = os.getenv("FCM_SERVICE_URL", "http://localhost:8001")
-            
-            for token in tokens:
-                try:
-                    response = requests.post(f"{fcm_service_url}/api/fcm/send", json={
-                        "token": token,
-                        "title": title,
-                        "message": message,
-                        "priority": priority
-                    }, timeout=10)
-                    
-                    if response.status_code == 200:
-                        print(f"✅ Alert sent to token: {token[:10]}...")
-                    else:
-                        print(f"❌ Failed to send to token: {token[:10]}...")
-                        
-                except Exception as e:
-                    print(f"❌ Error sending to token {token[:10]}...: {e}")
-                    
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error sending alerts: {e}")
-            return False
     
     def _generate_periodic_recommendations(self):
         """Generate new recommendations periodically"""

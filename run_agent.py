@@ -11,7 +11,6 @@ from ui.ui_components import (
     render_session_info,
     render_chat_messages, 
     render_footer, 
-    show_alert_notification,
     render_database_status
 )
 from core.base.mcp_client import (
@@ -32,53 +31,44 @@ from agent.bg_running.background_alert_service import (
 load_dotenv()
 
 
-def render_alert_controls():
-    """Render alert service controls in sidebar"""
-    with st.sidebar:
-        st.markdown("---")
-        st.subheader("🔔 Alert Service")
-        
-        # Service status
-        try:
-            status = get_service_status()
-            if status['running']:
-                st.success("🟢 Service Running")
-            else:
-                st.error("🔴 Service Stopped")
-        except Exception:
-            st.warning("⚠️ Service Status Unknown")
-        
-        if st.button("📊 Status"):
+def test_db_connection():
+    """Test database connection and return status."""
+    db = DatabaseManager()
+    try:
+        conn = db.get_connection()
+        if conn:
+            print("✅ Database connection successful.")
+            
+            # Test basic query
             try:
-                status = get_service_status()
-                st.json(status)
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
-
-def test_simple_alert():
-    """Test if alerts work at all"""
-    with st.sidebar:
-        st.markdown("---")
-        st.subheader("🧪 Test Alert")
-        
-        if st.button("🔴 Test High Priority"):
-            st.toast("🚨 HIGH PRIORITY TEST ALERT!", icon="🚨")
-            st.error("🚨 HIGH PRIORITY: This is a test high priority alert!")
-        
-        if st.button("🟡 Test Medium Priority"):
-            st.toast("🔔 Medium priority test alert", icon="🔔")
-            st.warning("🔔 MEDIUM: This is a test medium priority alert")
-        
-        if st.button("🔵 Test Low Priority"):
-            st.toast("ℹ️ Low priority test alert", icon="ℹ️")
-            st.info("ℹ️ LOW: This is a test low priority alert")
-
-# Add this to your main function
-def main():
-    """Main application function"""
-    # ... existing code ...
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM users;")
+                    user_count = cur.fetchone()[0]
+                    print(f"📊 Users in database: {user_count}")
+                    
+                    cur.execute("SELECT COUNT(*) FROM chat_sessions;")
+                    session_count = cur.fetchone()[0]
+                    print(f"📊 Sessions in database: {session_count}")
+                    
+                    cur.execute("SELECT COUNT(*) FROM chat_messages;")
+                    message_count = cur.fetchone()[0]
+                    print(f"📊 Messages in database: {message_count}")
+                    
+                conn.close()
+                return True
+            except Exception as query_error:
+                print(f"❌ Database query failed: {query_error}")
+                conn.close()
+                return False
+        else:
+            print("❌ Database connection failed - get_connection() returned None")
+            return False
+    except Exception as e:
+        print(f"❌ Database connection test failed: {str(e)}")
+        return False
     
-    render_alert_controls()
-    test_simple_alert()  # Add this line
-    
-    # ... rest of your code ...
+conn = test_db_connection()
+if not conn:
+    st.error("❌ Database connection failed. Please check your configuration.")
+else:
+    print("✅ Database connection successful. Proceeding with application setup...")

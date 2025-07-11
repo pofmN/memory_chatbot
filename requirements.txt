@@ -1,13 +1,72 @@
-sqlalchemy
+# Core Web Framework
 streamlit
-fastmcp
-tavily-python
+fastapi
+uvicorn[standard]
+
+# Database
+sqlalchemy
 psycopg2-binary
-python-dotenv
-pydantic
+pgvector
+
+# AI/ML Libraries
+google-generativeai
+openai
 langchain
 langchain-google-genai
+langchain-openai
 langgraph
-asyncio
-aiohttp
+langchain-community
+langchain-tavily
+langchain-core
+
+# Search & Tools
+tavily-python
+fastmcp
+
+# Firebase & FCM
+firebase-admin
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# HTTP & Async
 requests
+aiohttp
+httpx
+
+# Data Processing
+pandas
+numpy
+pydantic
+
+# Environment & Configuration
+python-dotenv
+pydantic-settings
+
+desktop-notifier
+
+# Utilities
+uuid
+typing-extensions
+python-multipart
+
+# Logging & Monitoring
+loguru
+
+# Date/Time
+python-dateutil
+
+# JSON & Serialization
+orjson
+
+# Development & Testing (optional)
+pytest
+pytest-asyncio
+black
+flake8
+
+# File Handling
+pathlib2
+
+# WebSocket Support (for real-time features)
+websockets

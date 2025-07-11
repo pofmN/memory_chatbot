@@ -1,0 +1,28 @@
+<!-- Save this as alert_client.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Alert Listener</title>
+</head>
+<body>
+  <h2>📡 Listening for alerts...</h2>
+
+  <script>
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+
+  const socket = new WebSocket("ws://localhost:8000/ws");
+
+  socket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    const title = data.title || "🔔 Alert";
+    const message = data.message || "";
+
+    if (Notification.permission === "granted") {
+      new Notification(title, { body: message });
+    }
+  };
+</script>
+</body>
+</html>

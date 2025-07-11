@@ -35,8 +35,8 @@ class DatabaseManager:
     # SESSION MANAGEMENT
     # ============================================================================
     
-    def create_session(self, session_id: str = None) -> Optional[str]:
-        """Create a new chat session"""
+    def create_session(self, session_id: str = None, user_id: str = "12345678-1234-1234-1234-123456789012") -> Optional[str]:
+        """Create a new chat session with user_id"""
         if session_id is None:
             session_id = str(uuid.uuid4())
         
@@ -45,11 +45,11 @@ class DatabaseManager:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO chat_sessions (session_id, status) 
-                        VALUES (%s, 'active') 
+                        INSERT INTO chat_sessions (session_id, user_id, status) 
+                        VALUES (%s, %s, 'active') 
                         ON CONFLICT (session_id) DO NOTHING
                         RETURNING session_id
-                    """, (session_id,))
+                    """, (session_id, user_id))
                     result = cur.fetchone()
                     conn.commit()
                     return result[0] if result else session_id
@@ -198,7 +198,6 @@ Instructions:
 Comprehensive Summary:"""
 
                     try:
-                        # Generate summary using Gemini
                         response = self.model.generate_content(prompt)
                         comprehensive_summary = response.text.strip()
                         
@@ -263,7 +262,6 @@ Comprehensive Summary:"""
     # ============================================================================
     # ACTIVITIES MANAGEMENT (SIMPLIFIED)
     # ============================================================================
-
     def create_activity(self, activity_data: dict) -> Optional[int]:
         """Create a new activity"""
         conn = self.get_connection()
@@ -360,17 +358,18 @@ Comprehensive Summary:"""
     # EVENTS MANAGEMENT (SIMPLIFIED)
     # ============================================================================
 
-    def create_event(self, event_data: dict) -> Optional[int]:
+    def create_event(self, event_data: dict, user_id: str = "12345678-1234-1234-1234-123456789012") -> Optional[int]:
         """Create a new event"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO event (name, start_time, end_time, location, priority, source)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO event (user_id, event_name, start_time, end_time, location, priority, source)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING event_id
                     """, (
+                        user_id,
                         event_data.get('name'),
                         event_data.get('start_time'),
                         event_data.get('end_time'),
@@ -675,60 +674,3 @@ Comprehensive Summary:"""
 # USAGE EXAMPLE FOR SINGLE USER
 # ============================================================================
 
-if __name__ == "__main__":
-    # Test the database manager
-    db = DatabaseManager()
-    
-    if db.test_connection():
-        print("✅ Single-user database connection successful!")
-        
-        # Test profile management
-        profile_data = {
-            'phone_number': '0123456789',
-            'year_of_birth': 1990,
-            'address': 'Ha Noi, Vietnam',
-            'major': 'Computer Science',
-            'additional_info': 'AI enthusiast and developer'
-        }
-        
-        # Update profile
-        if db.update_user_profile(profile_data):
-            print("✅ Profile updated successfully")
-        
-        # Get profile
-        #profile = db.get_user_profile()
-        #print(f"📝 Current profile: {profile}")
-        
-        # Test session and messaging
-        session_id = db.create_session()
-        if session_id:
-            print(f"📅 Created session: {session_id}")
-            
-            # Test auto-summarization with 5 messages
-            test_messages = [
-                ("user", "Hello, I'm John"),
-                ("assistant", "Hi John! How can I help you?"),
-                ("user", "I work as a software engineer"),
-                ("assistant", "That's great! What kind of projects do you work on?"),
-                ("user", "I develop AI applications"),  # This should trigger summarization
-            ]
-            
-            for role, content in test_messages:
-                db.save_message(session_id, role, content)
-                print(f"💬 Saved: {role} - {content}")
-            
-            # Check summary status
-            stats = db.get_session_summary_status(session_id)
-            print(f"📊 Summary status: {stats}")
-            
-            # Get final summary
-            summary = db.get_session_summary(session_id)
-            if summary:
-                print(f"📋 Session summary: {summary['summarize']}")
-        
-        # Test database stats
-        stats = db.get_database_stats()
-        print(f"📈 Database stats: {stats}")
-        
-    else:
-        print("❌ Database connection failed!")
