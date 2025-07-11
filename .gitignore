@@ -35,7 +35,7 @@ ENV/
 logs/
 *.log
 background_alerts.log
-
+firebase_credentials.json
 # Database
 *.db
 *.sqlite3
