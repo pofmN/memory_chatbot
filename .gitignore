@@ -51,4 +51,4 @@ firebase_credentials.json
 Thumbs.db
 
 # Docker
-.dockerignore
+.dockerignorefirebase_credentials.json
