@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create users table (replaces user_profile for multi-user support)
 CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    username VARCHAR(100) NOT NULL UNIQUE,
+    user_name VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) UNIQUE,
     phone_number VARCHAR(20),
     year_of_birth INTEGER,
@@ -23,10 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id VARCHAR(100) PRIMARY KEY,
     user_id UUID NOT NULL,
-    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
-    context_data JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -78,7 +75,7 @@ CREATE TABLE IF NOT EXISTS activities_analysis (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Create event table (now user-specific)
+-- Create event table (now user-specific with embedding support)
 CREATE TABLE IF NOT EXISTS event (
     event_id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
@@ -88,7 +85,7 @@ CREATE TABLE IF NOT EXISTS event (
     location VARCHAR(100),
     priority VARCHAR(20),
     description TEXT,
-    source VARCHAR(50) DEFAULT 'manual',
+    embedding vector(1536),  -- For OpenAI embeddings(adaa-002)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE

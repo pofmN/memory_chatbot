@@ -1,41 +1,13 @@
 import asyncio
 from langchain_tavily import TavilySearch
 from langchain.tools import StructuredTool
-from core.base.mcp_client import MCPClient
-
-
-def mcp_history_tool(session_id: str, mcp_client: MCPClient) -> str:
-    """Retrieve the summary of a chat session by its ID."""
-    try:
-        summary = asyncio.run(mcp_client.get_history_summary(session_id))
-        return summary
-    except Exception as e:
-        return f"Error retrieving session summary: {str(e)}"
-
-def update_user_information(user_input: str, mcp_client: MCPClient) -> str:
-    """Update user information in the database."""
-    try:
-        user_info = asyncio.run(mcp_client.add_user_info(user_input))
-        return user_info
-    except Exception as e:
-        return f"Error updating user information: {str(e)}"
-    
-def add_event_information(user_input:str, mcp_client: MCPClient) -> str:
-    
-    """Add an event to the MCP server."""
-    try:
-        event_info = asyncio.run(mcp_client.add_event(user_input))
-        return event_info
-    except Exception as e:
-        return f"Error adding event: {str(e)}"
-    
-def add_activity_information(user_input: str, mcp_client: MCPClient) -> str:
-    """Add an activity to the MCP server."""
-    try:
-        activity_info = asyncio.run(mcp_client.add_activity(user_input))
-        return activity_info
-    except Exception as e:
-        return f"Error adding activity: {str(e)}"
+from core.base.mcp_client import (
+    MCPClient, 
+    mcp_history_tool, 
+    update_user_information, 
+    add_event_information, 
+    add_activity_information
+)
 
 def setup_tools(mcp_client: MCPClient) -> list:
     """Setup and return all tools"""
@@ -88,7 +60,7 @@ def setup_tools(mcp_client: MCPClient) -> list:
     extract_event_info_tool = StructuredTool.from_function(
         func=lambda user_input: add_event_information(user_input, mcp_client),
         name="add_event",
-        description="""Use this tool AUTOMATICALLY whenever the user mentions a scheduled, purpose-driven event, appointment, meeting, or reminder that is not a regular habit. This tool is for one-time or infrequent occurrences with a specific goal (e.g., a meeting, doctor’s appointment, or deadline).
+        description="""Use this tool AUTOMATICALLY whenever the user mentions a scheduled, purpose-driven event, appointment, meeting, or reminder that is not a regular habit. This tool is for one-time or infrequent occurrences with a specific goal (e.g., a meeting, doctor's appointment, or deadline).
 
         ### Semantic Patterns:
         - Explicit scheduling: "meeting at 2 PM", "appointment with Dr. Smith tomorrow"

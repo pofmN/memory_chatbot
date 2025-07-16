@@ -4,6 +4,17 @@ from typing import Annotated, Literal, Optional
 from typing_extensions import TypedDict
 import os
 import json
+import logging
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from agent.extract_user_info.services import update_user_profile
@@ -100,11 +111,9 @@ USER INPUT TO ANALYZE:
             response = self.llm.with_structured_output(UserInformation).invoke(prompt)
             response_data = response.model_dump()
 
-            # Filter out None/empty values to only update mentioned fields
             filtered_data = {}
             for key, value in response_data.items():
                 if value is not None and value != "":
-                    # For strings, also check if it's not just whitespace
                     if isinstance(value, str) and value.strip():
                         filtered_data[key] = value.strip()
                     elif not isinstance(value, str):
@@ -146,6 +155,12 @@ USER INPUT TO ANALYZE:
                 if not self._validate_user_name(name):
                     validation_errors.append("User name must be at least 2 characters")
             
+            # Validate email
+            if extracted_info.get("email"):
+                email = extracted_info["email"]
+                if not isinstance(email, str) or "@" not in email or "." not in email:
+                    validation_errors.append("Invalid email format")
+            
             if validation_errors:
                 return {"error": "; ".join(validation_errors)}
             
@@ -158,7 +173,7 @@ USER INPUT TO ANALYZE:
     
     def _save_node(self, state: UserInfoState) -> dict:
         """Save the validated user information to the database"""
-        print("💾 Saving user information...")
+        logger.info("💾 Saving user information...")
         try:
             validated_info = state.get("validated_info", {})
             #current_profile = state.get("current_profile", {})
@@ -167,6 +182,7 @@ USER INPUT TO ANALYZE:
                 return {"save_result": "❌ No valid user information to save"}
             
             # Save to database
+            logger.info("Saving user profile to database...")
             success = update_user_profile(validated_info)
             
             if success:
@@ -175,7 +191,7 @@ USER INPUT TO ANALYZE:
                 print(f"✅ Successfully saved user info: {saved_fields}")
                 return {"save_result": result_msg}
             else:
-                return {"save_result": "❌ Failed to save user information to database"}
+                return {"save_result": "❌ Failed to save user information to database huhuhuhuhuhu"}
                 
         except Exception as e:
             print(f"❌ Error saving user information: {e}")
@@ -315,12 +331,11 @@ def create_user_info_extraction_agent(llm: ChatOpenAI = None) -> UserInfoExtract
     return UserInfoExtractionAgent(llm)
 
 # Convenience function for backwards compatibility
-def save_user_information(user_input: str) -> dict:
+def save_user_information(user_input: str) -> str:
     """Process user input and save user information (backwards compatibility)"""
     agent = create_user_info_extraction_agent()
     result = agent.process(user_input)
-    
     if result.get("success"):
-        return result.get("extracted_data", {})
+        return result.get("message", "User information saved successfully heheheheh")
     else:
-        return {"error": result.get("error", "Unknown error")}
+        return f"Error: {result.get('error', 'Unknown error')}"

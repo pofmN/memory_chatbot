@@ -322,8 +322,6 @@ Use the context to better understand relative time references and implicit infor
             return "update"
         elif intent == "SEARCH":
             return "search"
-        elif intent == "DELETE":
-            return "delete"
         else:
             return "end"
     
@@ -360,7 +358,7 @@ Use the context to better understand relative time references and implicit infor
         
         graph.add_edge("save", END)
         graph.add_edge("update", END)
-        graph.add_edge("search", END)
+        graph.add_edge("search", "save")
         
         return graph.compile()
     

@@ -95,6 +95,15 @@ Pay attention to the timing of activities and events to ensure recommendations t
                         continue
 
                 if recommendations:
+                    for rec in recommendations:
+                        rec['recommendation_type'] = rec.get('recommendation_type', 'general')
+                        rec['title'] = rec.get('title', 'No title')
+                        rec['content'] = rec.get('content', 'No content')
+                        rec['score'] = min(max(int(rec.get('score', 5)), 1), 10)
+                        rec['reason'] = rec.get('reason', '')
+                        rec['status'] = 'pending'
+                        shown_at = self._parse_datetime(rec.get('shown_at'))
+                        rec['shown_at'] = shown_at.isoformat() if shown_at else datetime.now().isoformat()
                     rec_count = create_recommendation(recommendations)
                     print(f"✅ Saved {rec_count} recommendations to database")
     
@@ -132,6 +141,17 @@ Pay attention to the timing of activities and events to ensure recommendations t
                 "recommendations": [],
                 "alerts_created": 0
             }
+
+    def _parse_datetime(self, datetime_str: str):
+        """Parse datetime string"""
+        if not datetime_str:
+            return None
+        try:
+            return datetime.fromisoformat(datetime_str.replace('Z', '+07:00'))
+                        
+        except Exception as e:
+            print(f"⚠️ Could not parse datetime: {datetime_str}")
+            return None
 
     def _fallback_parse_recommendations(self, prompt: str) -> list:
         """Fallback method when structured output fails"""
@@ -218,6 +238,16 @@ Pay attention to the timing of activities and events to ensure recommendations t
         
         return json.dumps(formatted_data, indent=2)
 
+    def _parse_datetime(self, datetime_str: str):
+        """Parse datetime string"""
+        if not datetime_str:
+            return None
+        try:
+            return datetime.fromisoformat(datetime_str.replace('Z', '+07:00'))
+        except Exception as e:
+            print(f"⚠️ Could not parse datetime: {datetime_str}")
+            return None
+
     def _create_alerts_from_recommendations(self, recommendations: list) -> int:
         """Create system alerts from high-score recommendations"""
         created_count = 0
@@ -233,13 +263,7 @@ Pay attention to the timing of activities and events to ensure recommendations t
                         shown_at = rec.get('shown_at')
                         if shown_at:
                             try:
-                                if isinstance(shown_at, str):
-                                    if 'T' in shown_at:
-                                        trigger_time = datetime.fromisoformat(shown_at.replace('Z', '+00:00'))
-                                    else:
-                                        trigger_time = datetime.fromisoformat(shown_at)
-                                else:
-                                    trigger_time = datetime.now() + timedelta(minutes=30)
+                                trigger_time = shown_at
                             except Exception as parse_error:
                                 print(f"⚠️ Error parsing shown_at time: {parse_error}")
                                 trigger_time = datetime.now() + timedelta(minutes=30)

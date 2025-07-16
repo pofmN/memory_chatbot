@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from core.base.storage import DatabaseManager
 
-app = FastAPI()
+app = FastAPI(title="FCM Token API", version="1.0.0")
 db = DatabaseManager()
 
 class TokenRequest(BaseModel):
@@ -17,30 +17,30 @@ class TokenRequest(BaseModel):
 async def register_fcm_token(token_request: TokenRequest):
     """Store FCM token in database"""
     try:
+        print("Create database connection")
         conn = db.get_connection()
+        print(f"🔔 Registering FCM token: {token_request.token[:10]}...")
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
             
         with conn.cursor() as cur:
-            # Check if token already exists
             cur.execute("""
-                SELECT id FROM fcm_tokens 
-                WHERE token = %s AND user_id = %s
-            """, (token_request.token, token_request.user_id))
-            
+                SELECT token_id FROM fcm_tokens
+                WHERE token = %s 
+            """, (token_request.token,))
             existing_token = cur.fetchone()
             
             if existing_token:
-                # Update existing token
+                print(f"✅ Token already exists: {token_request.token[:10]}...")
                 cur.execute("""
-                    UPDATE fcm_tokens 
+                    UPDATE fcm_tokens
                     SET is_active = true, last_used = %s, user_agent = %s
-                    WHERE token = %s AND user_id = %s
-                """, (datetime.now(), token_request.user_agent, token_request.token, token_request.user_id))
+                    WHERE token = %s
+                """, (datetime.now(), token_request.user_agent, token_request.token))
                 
                 message = "Token updated successfully"
             else:
-                # Insert new token
+                print(f"✅ Registering new token: {token_request.token[:10]}...")
                 cur.execute("""
                     INSERT INTO fcm_tokens (token, user_id, device_type, user_agent, is_active, created_at, last_used)
                     VALUES (%s, %s, %s, %s, true, %s, %s)
@@ -52,7 +52,6 @@ async def register_fcm_token(token_request: TokenRequest):
                     datetime.now(),
                     datetime.now()
                 ))
-                
                 message = "Token registered successfully"
         
         conn.commit()
@@ -61,18 +60,17 @@ async def register_fcm_token(token_request: TokenRequest):
         return {
             "success": True,
             "message": message,
-            "token": token_request.token[:10] + "..." # Don't return full token for security
+            "token_preview": token_request.token[:10] + "..."
         }
         
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error storing token: {str(e)}"
-        }
+        if conn:
+            conn.close()
+        raise HTTPException(status_code=500, detail=f"Error storing token: {str(e)}")
 
 @app.get("/api/fcm/tokens")
 async def get_active_tokens():
-    """Get all active FCM tokens"""
+    """Get all active FCM tokens from database"""
     try:
         conn = db.get_connection()
         if not conn:
@@ -94,11 +92,11 @@ async def get_active_tokens():
             "success": True,
             "tokens": [
                 {
-                    "token": token[0][:10] + "...", # Truncated for security
+                    "token": token[0],
                     "user_id": token[1],
                     "device_type": token[2],
-                    "created_at": token[3].isoformat(),
-                    "last_used": token[4].isoformat()
+                    "created_at": token[3].isoformat() if token[3] else None,
+                    "last_used": token[4].isoformat() if token[4] else None
                 }
                 for token in tokens
             ],
@@ -106,10 +104,14 @@ async def get_active_tokens():
         }
         
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error retrieving tokens: {str(e)}"
-        }
+        if conn:
+            conn.close()
+        raise HTTPException(status_code=500, detail=f"Error retrieving tokens: {str(e)}")
+
+@app.get("/")
+async def root():
+    """Health check endpoint"""
+    return {"message": "FCM Token API is running"}
 
 if __name__ == "__main__":
     import uvicorn

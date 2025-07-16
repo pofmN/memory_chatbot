@@ -104,7 +104,17 @@ class MCPClient():
 
 def init_mcp_client() -> MCPClient:
     """Initialize MCP client"""
-    MCP_SERVER_PATH = "/Users/nam.pv/Documents/work-space/memory_chat/mcp/server.py"
+    if os.path.exists('/app/mcp/server.py'):
+        MCP_SERVER_PATH = '/app/mcp/server.py'
+    else:
+        # Local development path
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(current_dir))
+        MCP_SERVER_PATH = os.path.join(project_root, "mcp", "server.py")
+    
+    if not os.path.exists(MCP_SERVER_PATH):
+        raise FileNotFoundError(f"MCP server not found at: {MCP_SERVER_PATH}")
+    
     return MCPClient(MCP_SERVER_PATH)
 
 def mcp_history_tool(session_id: str, mcp_client: MCPClient) -> str:
@@ -145,13 +155,15 @@ def initialize_session(db):
     if "single_session_id" not in st.session_state:
         sessions = db.get_all_sessions()
         if sessions:
+            print(f"✅ Found existing session: {sessions[0]['session_id']}")
             st.session_state.single_session_id = sessions[0]['session_id']
             history = db.get_chat_history(st.session_state.single_session_id)
             st.session_state.messages = [
-                {"role": msg['role'], "content": msg['content']} 
+                {"role": msg['role'], "content": msg['content']}
                 for msg in history
             ]
         else:
+            print("❌ No existing session found, creating a new one")
             new_session_id = str(uuid.uuid4())
             if db.create_session(new_session_id):
                 st.session_state.single_session_id = new_session_id

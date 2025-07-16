@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enable Notifications</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+    .status { margin: 20px 0; padding: 10px; border-radius: 5px; }
+    .success { background-color: #d4edda; color: #155724; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .info { background-color: #d1ecf1; color: #0c5460; }
+  </style>
+</head>
+<body>
+  <h2>Setting up notifications...</h2>
+  <p>Please wait while we register your device.</p>
+  <div id="status" class="status info">Initializing...</div>
+
+  <script type="module">
+
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBSnpSKMAMHRfrEbPep9Iv622vQLRSes60",
+      authDomain: "personal-chatapp-d057a.firebaseapp.com",
+      projectId: "personal-chatapp-d057a",
+      storageBucket: "personal-chatapp-d057a.appspot.com",
+      messagingSenderId: "969410542165",
+      appId: "1:969410542165:web:da852d6b292d64328132dc"
+    };
+
+    const statusDiv = document.getElementById('status');
+
+    function updateStatus(message, type = 'info') {
+      statusDiv.className = `status ${type}`;
+      statusDiv.textContent = message;
+      console.log(`[STATUS] ${message}`);
+    }
+
+    
+
+    async function initializeNotifications() {
+      try {
+        updateStatus('Initializing Firebase...');
+        
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        updateStatus('Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        console.log('🔔 Notification permission:', permission);
+        if (permission !== 'granted') {
+          throw new Error('Notification permission denied');
+        }
+
+        updateStatus('Getting FCM token...');
+        
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
+        
+        const token = await getToken(messaging, {
+          vapidKey: "BMFXutd6HTcRORL67LzTlLsa64_ql6K-LExqBbx7ctli5oe56jZ80WuE4fLn1P46-uXMN-dd5VIBAhdq18Odvc0",
+          serviceWorkerRegistration: registration
+        });
+
+        if (!token) {
+          throw new Error('Failed to get FCM token');
+        }
+
+        console.log('🔑 FCM TOKEN:', token);
+        console.log('📏 Token length:', token.length);
+        console.log('👤 User ID:', generateUserId());
+        console.log('🌐 User Agent:', navigator.userAgent);
+
+        updateStatus('✅ FCM token obtained successfully!', 'success');
+        //set FCM token status in localStorage
+        if (token) {
+          localStorage.setItem('fcm_token', "true");
+        }
+        // Redirect to Streamlit app include FCM token need
+        window.location.href = `http://0.0.0.0:8501/?fcm_token=${encodeURIComponent(token)}`;
+
+      } catch (error) {
+        console.error('❌ FCM setup error:', error);
+        updateStatus(`❌ Error: ${error.message}`, 'error');
+        
+        console.log('🐛 Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeNotifications);
+    } else {
+      initializeNotifications();
+    }
+  </script>
+</body>
+</html>

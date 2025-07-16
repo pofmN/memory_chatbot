@@ -11,13 +11,29 @@ import google.generativeai as genai
 class DatabaseManager:
     def __init__(self): 
         self.connection_params = {
-            'host': os.getenv('DB_HOST', 'localhost'),
+            'host': ('postgres'),
             'port': os.getenv('DB_PORT', '5432'),
             'database': os.getenv('DB_NAME', 'chatbot_db'),
             'user': os.getenv('DB_USER', 'chatbot_user'),
             'password': os.getenv('DB_PASSWORD', 'chatbot_password')
         }
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Configure Google API key BEFORE creating model
+        google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+        if google_api_key:
+            genai.configure(api_key=google_api_key)
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            print(f"✅ Google Gemini API configured")
+        else:
+            print("❌ Google API key not found - Gemini model disabled")
+            self.model = None
+            
+        # Test database connection on init
+        print(f"🔍 Testing database connection to {self.connection_params['host']}:{self.connection_params['port']}")
+        if self.test_connection():
+            print("✅ Database connection successful")
+        else:
+            print("❌ Database connection failed")
     
     def get_connection(self):
         """Get database connection"""
@@ -61,20 +77,17 @@ class DatabaseManager:
                 conn.close()
         return None
 
-    def get_all_sessions(self) -> List[dict]:
-        """Get all chat sessions"""
+    def get_all_sessions(self, user_id: str = "12345678-1234-1234-1234-123456789012") -> List[dict]:
+        """Get all chat sessions for a user"""
         conn = self.get_connection()
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
-                        SELECT cs.*, COUNT(cm.message_id) as message_count
-                        FROM chat_sessions cs
-                        LEFT JOIN chat_messages cm ON cs.session_id = cm.session_id
-                        GROUP BY cs.session_id, cs.start_time, cs.end_time, 
-                                 cs.status, cs.context_data, cs.created_at, cs.last_updated
-                        ORDER BY cs.last_updated DESC
-                    """)
+                        SELECT * FROM chat_sessions 
+                        WHERE user_id = %s
+                        ORDER BY last_updated DESC
+                    """, (user_id,))
                     return [dict(row) for row in cur.fetchall()]
             except psycopg2.Error as e:
                 print(f"Error retrieving sessions: {e}")
@@ -670,7 +683,5 @@ Comprehensive Summary:"""
                 conn.close()
         return False
 
-# ============================================================================
-# USAGE EXAMPLE FOR SINGLE USER
-# ============================================================================
+
 

@@ -113,7 +113,6 @@ Context: my schedule, my calendar, upcoming events
 VIETNAMESE SEARCH:
 Primary: tìm, tìm kiếm, xem, kiểm tra, danh sách, xem lịch, hiện, nhìn, có gì, lịch nào
 Context: lịch của tôi, sự kiện, cuộc họp nào
-Phrases: "tôi có lịch gì", "xem lịch", "kiểm tra lịch"
 
 ENGLISH DELETE:
 Primary: cancel, delete, remove, drop, cancel appointment, cancel meeting
@@ -133,7 +132,6 @@ SPECIAL RULES FOR VIETNAMESE:
 CONTEXTUAL ANALYSIS:
 - If user mentions specific time/date + event = likely CREATE
 - If user mentions people to meet + time = likely CREATE  
-- If user asks questions (gì, nào, khi nào) = likely SEARCH
 - If user mentions changing existing thing = likely UPDATE
 - If user mentions canceling = likely DELETE
 
@@ -148,7 +146,7 @@ Analysis:
 - No search questions or past tense = 0
 Total: 6 points for CREATE
 
-Respond with only the intent: CREATE, UPDATE, SEARCH, DELETE, or UNKNOWN
+Respond with only the intent: CREATE, UPDATE, SEARCH(just exactly return this intent when you are confidently about it, if not return create), or UNKNOWN
 """
 
 UPDATE_EVENT_PROMPT = """

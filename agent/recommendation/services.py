@@ -335,9 +335,9 @@ def create_recommendation(recommendation_data: List[Dict], user_id: str = DEFAUL
                 for rec in recommendation_data:
                     cur.execute("""
                         INSERT INTO recommendation (
-                            user_id, recommendation_type, title, content, score, reason, status, shown_at, created_at
+                            user_id, recommendation_type, title, content, score, reason, status, shown_at
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         user_id,
                         rec.get('recommendation_type', 'general'),
@@ -347,7 +347,6 @@ def create_recommendation(recommendation_data: List[Dict], user_id: str = DEFAUL
                         rec.get('reason', ''),
                         rec.get('status', 'pending'),
                         rec.get('shown_at', None),
-                        datetime.now()
                     ))
                     created_count += 1
                 
@@ -552,7 +551,7 @@ def get_due_alerts(user_id: str = DEFAULT_USER_ID) -> List[Dict]:
                 cur.execute("""
                     SELECT * FROM alert
                     WHERE user_id = %s AND status = 'pending'
-                    AND trigger_time BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+                    AND trigger_time BETWEEN NOW() AND NOW() + INTERVAL '60 minutes'
                     ORDER BY priority DESC, trigger_time ASC
                 """, (user_id,))
                 return [dict(row) for row in cur.fetchall()]

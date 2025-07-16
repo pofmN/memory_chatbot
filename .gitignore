@@ -36,6 +36,8 @@ logs/
 *.log
 background_alerts.log
 firebase_credentials.json
+firebase_key.json
+firebase-messaging-sw.js
 # Database
 *.db
 *.sqlite3

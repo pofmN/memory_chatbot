@@ -12,7 +12,7 @@ def get_user_profile() -> Optional[dict]:
         if conn:
             try:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("SELECT * FROM user_profile ORDER BY id LIMIT 1")
+                    cur.execute("SELECT * FROM users LIMIT 1")
                     result = cur.fetchone()
                     return dict(result) if result else None
             except psycopg2.Error as e:

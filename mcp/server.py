@@ -84,25 +84,19 @@ async def get_history_summary(session_id: str) -> str:
     return f"Summary for session {summary}"
 
 @mcp.tool()
-async def add_user_info(user_input: str) -> str:
-    """
-    Extract user information from the input string.
-    
-    Args:
-        user_input (str): The input string containing user information.
-        
-    Returns:
-        dict: Extracted user information as a dictionary
-    """
-    try:    
-        user_info = save_user_information(user_input)
-    except json.JSONDecodeError as e:
-        return {
-            "error": str(e),
-            "response": "Failed to extract user information."
-        }
-
-    return user_info
+def add_user_info(user_input: str) -> str:
+    """Add user information to the database"""
+    try:
+        result = save_user_information(user_input)
+        # Make sure result is a string
+        if isinstance(result, dict):
+            if result.get("error"):
+                return f"Error: {result['error']}"
+            else:
+                return "User information saved successfully"
+        return str(result)
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 @mcp.tool()
 async def add_event(user_input: str) -> str:

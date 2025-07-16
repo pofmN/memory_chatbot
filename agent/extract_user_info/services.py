@@ -1,5 +1,9 @@
 from core.base.storage import DatabaseManager
 import psycopg2
+import logging
+import os
+import dotenv
+dotenv.load_dotenv()
 from typing import Optional
 from psycopg2.extras import RealDictCursor
 
@@ -7,6 +11,16 @@ db = DatabaseManager()
 
 # Hardcoded default user ID for now
 DEFAULT_USER_ID = '12345678-1234-1234-1234-123456789012'
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def get_user_profile(user_id: str = DEFAULT_USER_ID) -> Optional[dict]:
     """Get user profile by user_id"""
@@ -26,18 +40,33 @@ def get_user_profile(user_id: str = DEFAULT_USER_ID) -> Optional[dict]:
 
 def update_user_profile(profile_data: dict, user_id: str = DEFAULT_USER_ID) -> bool:
     """Update user profile, keeping existing values for fields not provided"""
-    conn = db.get_connection()
+    try:
+        conn = db.get_connection()
+        logger.info("vào tới hàm update rồi nè!")
+        DB_HOST = os.getenv('DB_HOST')
+        logger.info(f"DB_HOST: {DB_HOST}")
+        DB_PORT = os.getenv('DB_PORT')
+        logger.info(f"DB_PORT: {DB_PORT}")
+        DB_NAME = os.getenv('DB_NAME')
+        logger.info(f"DB_NAME: {DB_NAME}")
+        DB_USER = os.getenv('DB_USER')
+        logger.info(f"DB_USER: {DB_USER}")
+        DB_PASSWORD = os.getenv('DB_PASSWORD')
+        logger.info(f"DB_PASSWORD: {DB_PASSWORD}")
+    except psycopg2.Error as e:
+        logger.info(f"Error connecting to database: {e}")
+        return False
     if conn:
+        logger.info("Kết nối tới database thành công")
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Get existing profile
                 cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
                 existing = cur.fetchone()
-                
                 if existing:
-                    # ✅ Merge new data with existing data
+                    logger.info("lấy được thông tin profile cũ rồi nè!")
                     updated_data = {
-                        'username': profile_data.get('username') or profile_data.get('user_name') or existing.get('username'),
+                        'user_name': profile_data.get('user_name') or profile_data.get('user_name') or existing.get('user_name'),
                         'email': profile_data.get('email') or existing.get('email'),
                         'phone_number': profile_data.get('phone_number') or existing.get('phone_number'),
                         'year_of_birth': profile_data.get('year_of_birth') or existing.get('year_of_birth'),
@@ -46,15 +75,16 @@ def update_user_profile(profile_data: dict, user_id: str = DEFAULT_USER_ID) -> b
                         'additional_info': profile_data.get('additional_info') or existing.get('additional_info')
                     }
                     
+                    logger.info(f"Updating profile for user {user_id}")
                     # Update with merged data
                     cur.execute("""
                         UPDATE users 
-                        SET username = %s, email = %s, phone_number = %s, year_of_birth = %s, 
+                        SET user_name = %s, email = %s, phone_number = %s, year_of_birth = %s, 
                             address = %s, major = %s, additional_info = %s, 
                             updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = %s
                     """, (
-                        updated_data['username'],
+                        updated_data['user_name'],
                         updated_data['email'],
                         updated_data['phone_number'],
                         updated_data['year_of_birth'],
@@ -65,13 +95,14 @@ def update_user_profile(profile_data: dict, user_id: str = DEFAULT_USER_ID) -> b
                     ))
                     print(f"✅ Updated profile for user {user_id}: {updated_data}")
                 else:
+                    logger.info(f"Creating new profile for user {user_id}")
                     # Create new user if none exists with the specified user_id
                     cur.execute("""
-                        INSERT INTO users (user_id, username, email, phone_number, year_of_birth, address, major, additional_info)
+                        INSERT INTO users (user_id, user_name, email, phone_number, year_of_birth, address, major, additional_info)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         user_id,
-                        profile_data.get('username') or profile_data.get('user_name', 'User'),  # Support both field names
+                        profile_data.get('user_name') or profile_data.get('user_name', 'User'),  # Support both field names
                         profile_data.get('email'),
                         profile_data.get('phone_number'),
                         profile_data.get('year_of_birth'),
@@ -100,12 +131,12 @@ def create_user_profile(profile_data: dict, user_id: str = None) -> Optional[str
                 if user_id:
                     # Create user with specific user_id
                     cur.execute("""
-                        INSERT INTO users (user_id, username, email, phone_number, year_of_birth, address, major, additional_info)
+                        INSERT INTO users (user_id, user_name, email, phone_number, year_of_birth, address, major, additional_info)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING user_id
                     """, (
                         user_id,
-                        profile_data.get('username') or profile_data.get('user_name', 'User'),
+                        profile_data.get('user_name') or profile_data.get('user_name', 'User'),
                         profile_data.get('email'),
                         profile_data.get('phone_number'),
                         profile_data.get('year_of_birth'),
@@ -116,11 +147,11 @@ def create_user_profile(profile_data: dict, user_id: str = None) -> Optional[str
                 else:
                     # Create user with auto-generated UUID
                     cur.execute("""
-                        INSERT INTO users (username, email, phone_number, year_of_birth, address, major, additional_info)
+                        INSERT INTO users (user_name, email, phone_number, year_of_birth, address, major, additional_info)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING user_id
                     """, (
-                        profile_data.get('username') or profile_data.get('user_name', 'User'),
+                        profile_data.get('user_name') or profile_data.get('user_name', 'User'),
                         profile_data.get('email'),
                         profile_data.get('phone_number'),
                         profile_data.get('year_of_birth'),
@@ -148,7 +179,7 @@ def get_or_create_default_user() -> str:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Try to get existing default user
-                cur.execute("SELECT user_id FROM users WHERE username = 'default_user' LIMIT 1")
+                cur.execute("SELECT user_id FROM users WHERE user_name = 'default_user' LIMIT 1")
                 result = cur.fetchone()
                 
                 if result:
@@ -156,7 +187,7 @@ def get_or_create_default_user() -> str:
                 else:
                     # Create default user
                     cur.execute("""
-                        INSERT INTO users (user_id, username, email, additional_info)
+                        INSERT INTO users (user_id, user_name, email, additional_info)
                         VALUES (%s, 'default_user', 'default@example.com', 'Default system user')
                         RETURNING user_id
                     """, (DEFAULT_USER_ID,))
@@ -206,7 +237,7 @@ def get_all_users() -> list:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    SELECT user_id, username, email, phone_number, year_of_birth, 
+                    SELECT user_id, user_name, email, phone_number, year_of_birth, 
                            address, major, additional_info, is_active, created_at, updated_at
                     FROM users 
                     ORDER BY created_at DESC
@@ -220,17 +251,17 @@ def get_all_users() -> list:
             conn.close()
     return []
 
-def get_user_by_username(username: str) -> Optional[dict]:
-    """Get user profile by username"""
+def get_user_by_user_name(user_name: str) -> Optional[dict]:
+    """Get user profile by user_name"""
     conn = db.get_connection()
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+                cur.execute("SELECT * FROM users WHERE user_name = %s", (user_name,))
                 result = cur.fetchone()
                 return dict(result) if result else None
         except psycopg2.Error as e:
-            print(f"Error retrieving user by username: {e}")
+            print(f"Error retrieving user by user_name: {e}")
             return None
         finally:
             conn.close()

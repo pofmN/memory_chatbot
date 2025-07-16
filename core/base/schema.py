@@ -12,6 +12,7 @@ class State(TypedDict):
 class UserInformation(BaseModel):
     user_name: Annotated[Optional[str], Field(description="Personal name of the user")]
     phone_number: Annotated[Optional[str], Field(description="User's phone number")]
+    email: Annotated[Optional[str], Field(description="User's email address")]
     year_of_birth: Annotated[Optional[int], Field(description="User's year of birth")]
     address: Annotated[Optional[str], Field(description="User's address (city, province, or full address)")]
     major: Annotated[Optional[str], Field(description="User's field of study or academic major")]

@@ -9,7 +9,17 @@ from agent.recommendation.services import create_activity, get_all_activities
 from agent.recommendation.prompt import EXTRACT_ACTIVITIES_PROMPT
 from datetime import datetime
 import dotenv
-
+import logging
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 dotenv.load_dotenv()
 
 class ActivityExtractor:
@@ -22,18 +32,19 @@ class ActivityExtractor:
         )
         
         self.extraction_prompt = f"""
-{EXTRACT_ACTIVITIES_PROMPT}
-"""
+        {EXTRACT_ACTIVITIES_PROMPT}
+        """
 
     def extract_activities(self, user_input: str) -> list:
         """Extract activities from user input"""
         try:
+            current_datetime = datetime.now().isoformat()
             prompt = f"""
             {self.extraction_prompt}
-            Here is the user input: {user_input}
+            Here is the user input: {user_input},
+            Current date and time: {current_datetime}, pay attention to the current time and time in user input.
             Extract all activities mentioned. If no specific activities are mentioned, return empty list.
             """
-            
             # Use structured output to get activities
             response = self.llm.with_structured_output(ActivitiesInformation).invoke(prompt)
             print(f"🔍 Extracting activities from user input: {user_input}")
@@ -71,9 +82,12 @@ class ActivityExtractor:
                     "tags": activity.get("tags", []),
                     "status": "pending"
                 }
-                
+                logger.info(f"Storing activity: {activity_data['activity_name']}")
                 activity_id = create_activity(activity_data)
-                
+                if activity_id:
+                    logger.info(f"✅Activity stored with ID: {activity_id}")
+                else:
+                    logger.warning(f"❌Failed to store activity: {activity_data['activity_name']}")
                 if activity_id:
                     activity_data["id"] = activity_id
                     stored_activities.append(activity_data)
@@ -95,38 +109,34 @@ class ActivityExtractor:
             print(f"⚠️ Could not parse datetime: {datetime_str}")
             return None
 
-    def process_user_input(self, user_input: str) -> dict:
-        """Complete activity extraction and storage process"""
+    def process_user_input(self, user_input: str) -> str:
+        """
+        Extracts activities from user input, stores them, and returns a summary string.
+
+        This method orchestrates the entire process of handling a user's text
+        input. It first calls the extractor to find potential activities,
+        then attempts to store them in the database. It returns a string
+        summarizing the outcome of these operations.
+        """
         try:
             activities = self.extract_activities(user_input)
             
             if not activities:
-                return {
-                    "success": False,
-                    "message": "No activities found in user input",
-                    "activities_extracted": 0,
-                    "activities_stored": 0
-                }
+                return "No activities were found in the user input."
             
             stored_activities = self.store_activities(activities)
-            print(f"📊 Processed {stored_activities} activities from user input")
+            num_extracted = len(activities)
+            num_stored = len(stored_activities)
             
-            return {
-                "success": True,
-                "message": f"Successfully processed {len(stored_activities)} activities",
-                "activities_extracted": len(activities),
-                "activities_stored": len(stored_activities),
-                "stored_activities": stored_activities
-            }
+            print(f"📊 Processed {num_stored} activities from user input")
+            return (
+                f"Success: Extracted {num_extracted} activities and stored {num_stored} of them. "
+                f"Stored activities: {stored_activities}."
+            )
             
         except Exception as e:
             print(f"❌ Error processing user input: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "activities_extracted": 0,
-                "activities_stored": 0
-            }
+            return f"An error occurred during processing: {e}"
 
 # Global activity extractor instance
 activity_extractor = ActivityExtractor()
