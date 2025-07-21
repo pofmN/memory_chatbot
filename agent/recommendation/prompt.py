@@ -105,9 +105,7 @@ Analyze the user's activity patterns and upcoming events to generate intelligent
 - Consider user's existing patterns and preferences
 - Identify potential conflicts or improvements
 - Provide personalized suggestions based on their data
-- Include Vietnamese context when relevant
 - Consider carefully user activity time and event time with current date time to give reasonable recommedation for alert in next hours, 
-each recommendation will be display each 20 minutes once.
-
-Field names is English, values is Vietnamese.
+each recommendation will be display in each 20 minutes once, so shown at time of each recommendation must far from each other 20 minutes.
+- JUST give recommendation for next 1 hour, AND SHOWN AT TIME MUST BE WITHIN 1 HOUR FROM CURRENTIME, so if there are no activities or events happen in next 1 hour, you can just give some tips of the day.
 """

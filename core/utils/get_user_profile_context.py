@@ -11,7 +11,7 @@ def get_user_profile_context() -> str:
         profile_context = ""
         if user_profile:
             profile_context = f"""
-USER PROFILE INFORMATION:
+USER PROFILE INFORMATION: 
 - Name: {user_profile.get('user_name', 'Not provided')}
 - Phone: {user_profile.get('phone_number', 'Not provided')}
 - Year of Birth: {user_profile.get('year_of_birth', 'Not provided')}

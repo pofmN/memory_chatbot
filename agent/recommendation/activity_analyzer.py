@@ -12,6 +12,17 @@ from core.base.storage import DatabaseManager
 import json
 import dotenv
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 dotenv.load_dotenv()
 db = DatabaseManager()
 
@@ -42,6 +53,7 @@ class ActivityAnalyzer:
     def analyze_activities(self) -> dict:
         """Analyze only pending activities and update their status"""
         try:
+            logger.info("🔍 Starting activity analysis...")
             pending_activities = get_pending_activities()
             
             if not pending_activities:
@@ -51,7 +63,7 @@ class ActivityAnalyzer:
                     "analyzed_count": 0
                 }
             
-            print(f"🔍 Found {len(pending_activities)} pending activities to analyze...")
+            logger.info(f"🔍 Found {len(pending_activities)} pending activities to analyze...")
             
             activity_groups = self._group_activities(pending_activities)
             
@@ -86,7 +98,7 @@ class ActivityAnalyzer:
             
             if analyzed_activity_ids:
                 mark_activities_analyzed(analyzed_activity_ids)
-            
+            logger.info(f"✅ Successfully analyzed {analyzed_count} activity types")
             return {
                 "success": True,
                 "message": f"Successfully analyzed {analyzed_count} activity types",
@@ -96,6 +108,7 @@ class ActivityAnalyzer:
             }
             
         except Exception as e:
+            logger.error(f"❌ Error in activity analysis: {e}")
             print(f"❌ Error in activity analysis: {e}")
             return {
                 "success": False,

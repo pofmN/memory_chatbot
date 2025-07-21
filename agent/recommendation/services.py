@@ -65,7 +65,7 @@ def get_pending_activities(user_id: str = DEFAULT_USER_ID) -> List[Dict]:
             conn.close()
     return []
 
-def update_activity_status(activity_id: int, status: str, user_id: str = DEFAULT_USER_ID) -> bool:
+def update_activity_status(activity_id: int, status: str = 'analyzed', user_id: str = DEFAULT_USER_ID) -> bool:
     """Update activity status for a specific user"""
     conn = db.get_connection()
     if conn:
@@ -153,7 +153,7 @@ def mark_activities_analyzed(activity_ids: List[int], user_id: str = DEFAULT_USE
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    UPDATE activities 
+                    UPDATE activities
                     SET status = 'analyzed'
                     WHERE id = ANY(%s) AND user_id = %s
                 """, (activity_ids, user_id))
@@ -227,7 +227,6 @@ def get_activity_analysis(activity_type: str, user_id: str = DEFAULT_USER_ID) ->
         finally:
             conn.close()
     return None
-
 
 def update_activity_analysis(analysis_id: int, analysis_data: Dict) -> bool:
     """Update existing activity analysis"""
@@ -325,41 +324,51 @@ def get_upcoming_events(days: int = 7, user_id: str = DEFAULT_USER_ID) -> List[D
             conn.close()
     return []
 
-def create_recommendation(recommendation_data: List[Dict], user_id: str = DEFAULT_USER_ID) -> Optional[int]:
-    """Create recommendations in batch for a specific user"""
+from typing import List, Dict, Optional
+import psycopg2
+# Assume db and DEFAULT_USER_ID are defined elsewhere
+
+def create_recommendation(recommendation_data: List[Dict], user_id: str = DEFAULT_USER_ID) -> Optional[List[int]]:
+    """
+    Create recommendations in batch for a specific user and return their new IDs.
+    """
     conn = db.get_connection()
-    if conn:
-        try:
-            with conn.cursor() as cur:
-                created_count = 0
-                for rec in recommendation_data:
-                    cur.execute("""
-                        INSERT INTO recommendation (
-                            user_id, recommendation_type, title, content, score, reason, status, shown_at
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        user_id,
-                        rec.get('recommendation_type', 'general'),
-                        rec.get('title'),
-                        rec.get('content'),
-                        rec.get('score', 0),
-                        rec.get('reason', ''),
-                        rec.get('status', 'pending'),
-                        rec.get('shown_at', None),
-                    ))
-                    created_count += 1
-                
-                conn.commit()
-                print(f"✅ Created {created_count} recommendations for user {user_id}")
-                return created_count
-        except psycopg2.Error as e:
-            print(f"Error creating recommendations: {e}")
-            conn.rollback()
-            return None
-        finally:
-            conn.close()
-    return None
+    if not conn:
+        return None
+
+    new_ids = []
+    try:
+        with conn.cursor() as cur:
+            for rec in recommendation_data:
+                cur.execute("""
+                    INSERT INTO recommendation (
+                        user_id, recommendation_type, title, content, score, reason, status, shown_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING recommendation_id
+                """, (
+                    user_id,
+                    rec.get('recommendation_type', 'general'),
+                    rec.get('title'),
+                    rec.get('content'),
+                    rec.get('score', 0),
+                    rec.get('reason', ''),
+                    rec.get('status', 'pending'),
+                    rec.get('shown_at', None),
+                ))
+                # Fetch the returned ID from the cursor
+                new_id = cur.fetchone()[0]
+                new_ids.append(new_id)
+
+            conn.commit()
+            print(f"✅ Created {len(new_ids)} recommendations for user {user_id}")
+            return new_ids
+    except psycopg2.Error as e:
+        print(f"Error creating recommendations: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
 
 def update_recommendation_status(recommendation_id: int, status: str) -> bool:
     """Update recommendation status"""
@@ -369,8 +378,8 @@ def update_recommendation_status(recommendation_id: int, status: str) -> bool:
             with conn.cursor() as cur:
                 cur.execute("""
                     UPDATE recommendation 
-                    SET status = %s,
-                    WHERE id = %s
+                    SET status = %s
+                    WHERE recommendation_id = %s
                 """, (status, recommendation_id))
                 conn.commit()
                 success = cur.rowcount > 0

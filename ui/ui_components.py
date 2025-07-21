@@ -89,7 +89,6 @@ def render_sidebar():
     st.sidebar.title("🎨 Customize Your AI")
     st.sidebar.markdown("---")
     
-    # ✅ Custom Personality Section
     st.sidebar.subheader("🤖 AI Personality")
     
     selected_personality = st.sidebar.selectbox(
@@ -133,7 +132,6 @@ def render_sidebar():
     if communication_style != st.session_state.communication_style:
         st.session_state.communication_style = communication_style
     
-    # ✅ Response Length
     response_length = st.sidebar.selectbox(
         "Response length preference:",
         ["Balanced", "Brief", "Detailed", "Comprehensive"],

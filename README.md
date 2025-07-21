@@ -1,60 +1,95 @@
-# AI Chatbot with Memory & Event Management
+# Memory Chatbot with Firebase Notifications & AI Agents
 
-A sophisticated AI chatbot application with persistent memory, event management, user information extraction, and web search capabilities. Built using LangGraph, Streamlit, SQLAlchemy, and Model Context Protocol (MCP).
+A comprehensive AI chatbot ecosystem featuring real-time Firebase Cloud Messaging notifications, background alert services, specialized LangGraph agents, and intelligent activity analysis. Built using LangGraph, Streamlit, PostgreSQL, Firebase FCM, and Model Context Protocol (MCP) for seamless multi-user chat experiences with proactive recommendations.
 
 ## 🚀 Features
 
-- **Persistent Chat Memory**: Stores and retrieves conversation history using PostgreSQL with SQLAlchemy ORM
-- **User Information Extraction**: Automatically extracts and stores user profile information from conversations
-- **Event Management**: Intelligent event extraction from natural language and calendar management
+### Core Capabilities
+- **Persistent Chat Memory**: Multi-user chat sessions with PostgreSQL storage and SQLAlchemy ORM
+- **Firebase Cloud Messaging (FCM)**: Real-time browser notifications with token management and Firebase Admin SDK
+- **Background Alert Service**: Automated alert processing and notification delivery system
+- **Specialized AI Agents**: LangGraph-powered agents for user information, event management, and activity analysis
 - **Web Search Integration**: Real-time web search powered by Tavily API through MCP server
-- **Session Management**: Single-user persistent session with auto-summarization
-- **Customizable AI Personality**: Multiple personality presets and communication styles
-- **Interactive UI**: Clean Streamlit interface with sidebar customization
-- **Modular Architecture**: Well-structured codebase with separate agents and tools
-- **SQLAlchemy ORM**: Robust database operations with proper relationship management
-- **Docker Support**: Complete containerized deployment with Docker Compose
+- **Activity Analysis**: Intelligent pattern recognition and habit analysis with recommendation engine
+
+### Firebase & Notification System
+- **FCM Token Management**: Automatic token collection and storage with device tracking
+- **Background Alert Processing**: Continuous monitoring for due alerts and recommendations
+- **Real-time Notifications**: Browser push notifications with Firebase Admin SDK integration
+- **Multi-device Support**: Cross-platform notification delivery and token synchronization
+- **Notification History**: Complete tracking of sent notifications and user acknowledgments
+
+### AI-Powered Agents & Analysis
+- **User Information Agent**: Automatic extraction and validation of personal information from conversations
+- **Event Extraction Agent**: Natural language processing for calendar events with smart date/time parsing
+- **Activity Analyzer**: Pattern recognition engine for user habits and routine analysis
+- **Recommendation Engine**: AI-generated suggestions based on activity patterns and upcoming events
+- **Memory Management**: Auto-summarization and intelligent conversation history retrieval
+
+### Infrastructure & Deployment
+- **Docker Containerization**: Complete multi-service deployment with Docker Compose
+- **PostgreSQL Database**: Robust multi-user database schema with vector embeddings support
+- **MCP Protocol Integration**: Model Context Protocol for extensible tool integration
+- **FastAPI Services**: RESTful APIs for FCM token management and notification services
+- **Firebase Hosting**: Dedicated notification setup site for FCM token collection
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Streamlit     │    │   LangGraph     │    │  MCP Server     │
-│   Frontend      │◄──►│   Workflow      │◄──►│   (Python)      │
-│   (UI Layer)    │    │   (Core Logic)  │    │   (Tools)       │
+│   Streamlit     │    │   Firebase      │    │  Background     │
+│   Frontend      │◄──►│   FCM Service   │◄──►│  Alert Service  │
+│   (Chat UI)     │    │   (Push Notif.) │    │  (Monitoring)   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
+         │                       ▼                       ▼
+         ▼              ┌─────────────────┐    ┌─────────────────┐
+┌─────────────────┐     │   FastAPI FCM   │    │  Recommendation │
+│   LangGraph     │◄───►│   Server        │    │  Engine         │
+│   Agents Hub    │     │   (Token Mgmt)  │    │  (AI Analysis)  │
+└─────────────────┘     └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PostgreSQL    │    │   OpenAI GPT    │    │   Tavily API    │
-│   + SQLAlchemy  │    │   4o-mini       │    │   Web Search    │
-│   (Database)    │    │   (LLM)         │    │   (External)    │
+│  Specialized    │    │   PostgreSQL    │    │  External APIs  │
+│  AI Agents:     │◄──►│   Multi-User    │    │  • Tavily Web   │
+│  • User Info    │    │   Database      │    │  • OpenAI LLM   │
+│  • Events       │    │   + Vectors     │    │  • Firebase     │
+│  • Activities   │    │   + FCM Tokens  │    │  • MCP Tools    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │
-         │
-┌─────────────────┐
-│   Specialized   │
-│   Agents:       │
-│   • User Info   │
-│   • Events      │
-│   • Memory      │
-└─────────────────┘
 ```
+
+### Service Architecture
+- **Main App**: Streamlit frontend with LangGraph workflow orchestration
+- **FCM Service**: FastAPI server for Firebase token management and notification APIs
+- **Background Service**: Continuous monitoring for alerts, recommendations, and activity analysis
+- **Notifier Site**: Firebase-hosted website for FCM token collection from browsers
+- **Database Layer**: PostgreSQL with multi-user schema, vector embeddings, and FCM token storage
+- **MCP Server**: Model Context Protocol server providing web search and tool integration
 
 ## 📋 Prerequisites
 
-- **Backend:** Python 3.8+
-- **AI:** OpenAI GPT-4o-mini (with custom endpoint)
-- **Database:** PostgreSQL 15+ with SQLAlchemy ORM
-- **UI:** Streamlit
-- **Containers:** Docker & Docker Compose
-- **Database Management:** pgAdmin 4
-- **API Keys:** Tavily API key, OpenAI API key
+### Core Requirements
+- **Python**: 3.8+ with pip package manager
+- **Database**: PostgreSQL 15+ with pgvector extension for embeddings
+- **AI Services**: OpenAI API key (GPT-4o-mini) with custom endpoint support
+- **Web Search**: Tavily API key for real-time web search capabilities
+- **Containers**: Docker & Docker Compose for deployment
 
-## 🛠️ Installation
+### Firebase Requirements
+- **Firebase Project**: Google Firebase account with Cloud Messaging enabled
+- **Service Account**: Firebase Admin SDK credentials (JSON key file)
+- **VAPID Keys**: Web Push certificate for browser notifications
+- **Firebase Hosting**: Optional, for hosting the FCM token collection site
 
-### Option 1: Docker Deployment (Recommended)
+### Development Tools
+- **Database GUI**: pgAdmin 4 for database management (included in Docker setup)
+- **Code Editor**: VS Code or similar with Python support
+- **Git**: Version control for project management
+
+## 🛠️ Installation & Setup
+
+### Step 1: Project Setup
 
 1. **Clone the repository**
    ```bash
@@ -62,46 +97,193 @@ A sophisticated AI chatbot application with persistent memory, event management,
    cd memory_chat
    ```
 
-2. **Set up environment variables**
+2. **Create environment file**
    ```bash
    cp .env.example .env
    ```
-   
-   Edit `.env` file with your API keys:
+
+### Step 2: Firebase Configuration
+
+3. **Set up Firebase Project**
+   - Visit [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project or use existing one
+   - Enable **Cloud Messaging** in project settings
+   - Generate **Web Push certificates** (VAPID keys)
+
+4. **Generate Service Account Key**
+   - Go to Project Settings > Service Accounts
+   - Click "Generate new private key"
+   - Save as `firebase_key.json` in project root
+   - This file contains Firebase Admin SDK credentials
+
+5. **Configure Firebase Web App**
+   - Register a web app in Firebase console
+   - Copy the configuration object (apiKey, projectId, etc.)
+   - Update `notifier_site/public/index.html` with your config
+
+### Step 3: Environment Configuration
+
+6. **Update .env file**
    ```env
    # API Keys (Required)
-   OPENAI_API_KEY=your_openai_api_key
-   TAVILY_API_KEY=your_tavily_api_key
-   GOOGLE_API_KEY=your_google_api_key
-   
+   OPENAI_API_KEY=your_openai_api_key_here
+   TAVILY_API_KEY=your_tavily_api_key_here
+   GOOGLE_API_KEY=your_google_api_key_here
+
+   # Firebase Configuration
+   FIREBASE_CREDENTIALS_PATH=./firebase_key.json
+   FIREBASE_API_KEY=your_firebase_api_key
+   FIREBASE_PROJECT_ID=your_project_id
+   FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   FIREBASE_APP_ID=your_app_id
+   FIREBASE_VAPID_KEY=your_vapid_key
+
    # Database Configuration
    DB_HOST=postgres
    DB_PORT=5432
    DB_NAME=chatbot_db
    DB_USER=chatbot_user
    DB_PASSWORD=chatbot_password
-   
-   # MCP Server Configuration
-   MCP_SERVER_PATH=./mcp_server/server.py
+
+   # Service Configuration
+   FCM_SERVICE_PORT=8001
+   FCM_SERVICE_URL=http://localhost:8001
+   MCP_SERVER_PATH=./mcp/server.py
+
+   # Optional: Analytics & Monitoring
+   LANGSMITH_API_KEY=your_langsmith_key
+   LANGSMITH_TRACING=true
+   LANGSMITH_PROJECT=memory_chatbot
    ```
 
-3. **Start with Docker Compose**
+### Step 4: Docker Deployment (Recommended)
+
+7. **Start all services**
    ```bash
-   # Start all services
+   # Build and start all containers
    docker-compose up -d --build
-   
-   # Check status
+
+   # Check service status
    docker-compose ps
-   
-   # View logs
+
+   # Monitor logs
    docker-compose logs -f
    ```
 
-4. **Access the application**
-   - **Chatbot UI**: http://localhost:8501
-   - **PgAdmin**: http://localhost:8080 (admin@chatbot.com / admin123)
+8. **Verify deployment**
+   - **Main App**: http://localhost:8501
+   - **FCM Service**: http://localhost:8001
+   - **Database Admin**: http://localhost:8080 (pgAdmin)
+   - **Notifier Site**: `notifier_site/public/index.html` (serve locally or deploy to Firebase)
 
-### Option 2: Local Development
+### Step 5: Alternative Local Development
+
+For development without Docker:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start PostgreSQL (local installation required)
+# Update .env with local database settings
+
+# Start FCM Service
+python start_fcm_service.py
+
+# Start main application
+streamlit run app_dev.py
+
+# Start background service (optional)
+python -m agent.bg_running.background_alert_service
+```
+## 🚀 Usage
+
+### Setting up Browser Notifications
+
+1. **Enable Notifications**
+   - Visit the main app: http://localhost:8501
+   - Click "Enable Notifications" in the sidebar
+   - Allow browser notification permissions when prompted
+   - Your FCM token will be automatically registered
+
+2. **Alternative Token Registration**
+   ```bash
+   # Serve the notifier site locally
+   cd notifier_site/public
+   python -m http.server 3000
+   
+   # Visit http://localhost:3000
+   # Follow prompts to register FCM token
+   ```
+
+### Core Features Usage
+
+3. **Chat Interface**
+   - Natural conversation with memory retention
+   - Automatic user information extraction
+   - Event and activity tracking from conversation
+   - Real-time web search integration
+
+4. **Event Management**
+   ```
+   User: "I have a meeting with John tomorrow at 2 PM"
+   → Automatically creates calendar event
+   → Sets up reminder notifications
+   → Stores in database with priority analysis
+   ```
+
+5. **Activity Analysis**
+   ```
+   User: "I usually go jogging in the morning"
+   → Analyzes activity patterns
+   → Generates recommendations
+   → Creates intelligent alerts
+   ```
+
+6. **Background Services**
+   - Automatic alert processing every 5 minutes
+   - Recommendation generation based on activity patterns
+   - FCM notification delivery for due alerts
+   - Activity analysis and habit tracking
+
+### Advanced Features
+
+7. **MCP Tools Integration**
+   ```bash
+   # Test MCP server directly
+   cd mcp
+   python server.py
+   
+   # Available tools:
+   # - Web search via Tavily
+   # - User information extraction
+   # - Event management
+   # - Activity tracking
+   ```
+
+8. **API Endpoints**
+   ```bash
+   # FCM Service APIs
+   curl -X POST http://localhost:8001/api/fcm/register \
+     -H "Content-Type: application/json" \
+     -d '{"token":"fcm_token_here","user_id":"user_123"}'
+   
+   # Get active tokens
+   curl http://localhost:8001/api/fcm/tokens
+   ```
+
+### Customization Options
+
+9. **AI Personality Settings**
+   - Choose from predefined personality presets
+   - Adjust communication style (formal, casual, technical)
+   - Set response length preferences
+   - Configure language settings
+
+10. **Notification Preferences**
+    - Configure alert timing and frequency
+    - Set priority levels for different event types
+    - Customize notification content and formatting
 
 1. **Clone and setup environment**
    ```bash
@@ -176,71 +358,135 @@ python server.py
 
 ## 🔧 Configuration
 
-### Database Schema (SQLAlchemy Models)
+### Multi-User Database Schema
 
-The application uses PostgreSQL with SQLAlchemy ORM:
+The application uses PostgreSQL 15+ with pgvector extension and comprehensive multi-user support:
 
-**Core Tables:**
-- `user_profile`: Single user profile information
-- `chat_sessions`: Chat session metadata
-- `chat_messages`: Individual messages with relationships
-- `chat_summaries`: Auto-generated conversation summaries
+#### Core User Management
+- **`users`**: Multi-user support with UUID identifiers, profiles, and authentication
+- **`chat_sessions`**: User-specific chat sessions with metadata and context
+- **`chat_messages`**: Individual messages linked to sessions with role tracking
+- **`chat_summaries`**: Auto-generated conversation summaries per session
 
-**Feature Tables:**
-- `activities`: User activities and tasks
-- `event`: Calendar events and appointments
-- `alert`: System alerts and notifications
-- `recommendation`: AI-generated recommendations
-- `activities_analysis`: Activity frequency analysis
+#### Firebase & Notification System  
+- **`fcm_tokens`**: Firebase Cloud Messaging tokens with device tracking
+- **`alert`**: User-specific system alerts with trigger times and priorities
+- **`notification_history`**: Complete tracking of sent notifications and acknowledgments
+- **`user_sessions`**: Session management with expiration and device tracking
 
-### Specialized Agents
+#### AI Analysis & Recommendations
+- **`activities`**: User activities with tags, timestamps, and analysis status
+- **`activities_analysis`**: Pattern analysis results with frequency data and preferences
+- **`event`**: Calendar events with vector embeddings for similarity search
+- **`recommendation`**: AI-generated suggestions with scoring and status tracking
 
-**User Information Agent:**
-- Extracts personal information from conversations
-- Validates and stores user profile data
-- Handles profile updates and corrections
+### Specialized LangGraph Agents
 
-**Event Extraction Agent:**
-- Parses natural language for events and appointments
-- Converts relative dates to absolute timestamps
-- Manages event priorities and locations
+#### User Information Agent (`agent/extract_user_info/`)
+```python
+# Workflow: extract → validate → save
+- Automatic extraction of personal information from natural conversation
+- Validation of phone numbers, birth years, and data consistency
+- Incremental profile building with conflict resolution
+- Multi-language support for information detection
+```
 
-**Memory Tools:**
-- Auto-summarization every 5 messages
-- Intelligent history retrieval
-- Context-aware conversation memory
+#### Event Extraction Agent (`agent/extract_event/`)
+```python
+# Workflow: detect_intent → extract → validate → save/update/search
+- Natural language processing for calendar events
+- Smart date/time parsing with timezone support
+- Intent detection: CREATE, UPDATE, SEARCH, DELETE
+- Priority inference from context and keywords
+```
 
-### Environment Variables
+#### Activity Analyzer (`agent/recommendation/activity_analyzer.py`)
+```python
+# Pattern recognition for user habits and routines
+- Groups activities by similarity and tags
+- Analyzes preferred times and frequency patterns
+- Generates habit recommendations based on analysis
+- Supports both automated and manual activity analysis
+```
+
+#### Recommendation Engine (`agent/recommendation/recommendation_engine.py`)
+```python
+# AI-powered suggestions based on patterns
+- Combines activity analysis with upcoming events
+- Generates personalized recommendations with scoring
+- Creates system alerts for high-priority suggestions
+- Updates recommendation status based on user interaction
+```
+
+### Firebase Cloud Messaging Integration
+
+#### FCM Service Architecture
+```bash
+# FastAPI server at localhost:8001
+POST /api/fcm/register    # Register FCM tokens
+GET  /api/fcm/tokens      # Retrieve active tokens
+```
+
+#### Background Alert Service
+```python
+# Continuous monitoring service
+- Processes due alerts every 5 minutes
+- Sends Firebase notifications to registered devices
+- Generates periodic recommendations
+- Cleans up old alerts and maintains data hygiene
+```
+
+#### Token Collection Flow
+```
+1. User visits notifier site or main app
+2. Browser requests notification permission
+3. Firebase generates FCM token
+4. Token registered via API with user association
+5. Background service monitors for due alerts
+6. Notifications sent via Firebase Admin SDK
+```
+
+### Environment Configuration
 
 ```env
-# Database Configuration
+# Core Application
+OPENAI_API_KEY=your_openai_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Database (Multi-user PostgreSQL)
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=chatbot_db
 DB_USER=chatbot_user
 DB_PASSWORD=chatbot_password
 
-# API Keys
-OPENAI_API_KEY=your_openai_api_key_here
-TAVILY_API_KEY=your_tavily_api_key_here
-GOOGLE_API_KEY=your_google_api_key_here
+# Firebase Configuration
+FIREBASE_CREDENTIALS_PATH=./firebase_key.json
+FIREBASE_API_KEY=your_firebase_api_key
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+FIREBASE_APP_ID=your_app_id
+FIREBASE_VAPID_KEY=your_vapid_key
 
-# MCP Server
-MCP_SERVER_PATH=./mcp_server/server.py
+# Service Configuration
+FCM_SERVICE_PORT=8001
+FCM_SERVICE_URL=http://localhost:8001
+MCP_SERVER_PATH=./mcp/server.py
 
-# UI Configuration
-PAGE_TITLE=AI Chatbot with Memory
-PAGE_ICON=🤖
-LAYOUT=wide
+# Optional: Analytics & Monitoring
+LANGSMITH_API_KEY=your_langsmith_key
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=memory_chatbot
 ```
 
 ## 📚 API Reference
 
-### Agent Processing
+### LangGraph Agent Processing
 
 #### User Information Extraction
 ```python
-from agents.extract_user_info_agent import create_user_info_extraction_agent
+from agent.extract_user_info.agent import create_user_info_extraction_agent
 
 agent = create_user_info_extraction_agent(llm)
 result = agent.process("My name is John, I'm 25 years old from NYC")
@@ -250,29 +496,117 @@ if result.get("success"):
     print(f"Data: {result['extracted_data']}")
 ```
 
-#### Event Extraction
+#### Event Management
 ```python
-from agents.extract_event_agent import create_event_extraction_agent
+from agent.extract_event.agent import EventExtractionAgent
 
-agent = create_event_extraction_agent(llm)
+agent = EventExtractionAgent(llm)
 result = agent.process("Meeting with John tomorrow at 2 PM in conference room A")
+# Supports: CREATE, UPDATE, SEARCH, DELETE operations
 ```
 
-### Database Operations (SQLAlchemy)
-
+#### Activity Analysis
 ```python
-from database.storage import DatabaseManager
+from agent.recommendation.activity_analyzer import analyze_pending_activities
+
+# Analyze pending activities
+result = analyze_pending_activities()
+print(f"Analyzed {result['analyzed_count']} activity types")
+
+# Analyze specific activity type
+from agent.recommendation.activity_analyzer import analyze_activity_type
+result = analyze_activity_type("jogging")
+```
+
+#### Recommendation Generation
+```python
+from agent.recommendation.recommendation_engine import generate_recommendations
+
+result = generate_recommendations()
+print(f"Generated {len(result['recommendations'])} recommendations")
+print(f"Created {result['alerts_created']} alerts")
+```
+
+### Firebase Cloud Messaging API
+
+#### FCM Token Management
+```bash
+# Register FCM token
+curl -X POST http://localhost:8001/api/fcm/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "fcm_token_here",
+    "user_id": "12345678-1234-1234-1234-123456789012", 
+    "device_type": "web",
+    "user_agent": "Mozilla/5.0..."
+  }'
+
+# Get all active tokens
+curl http://localhost:8001/api/fcm/tokens
+```
+
+#### Background Service Management
+```python
+from agent.bg_running.background_alert_service import (
+    start_alert_service, stop_alert_service, get_service_status
+)
+
+# Start background monitoring
+start_alert_service()
+
+# Check service status
+status = get_service_status()
+print(f"Service running: {status['is_running']}")
+
+# Force check for alerts
+force_check_alerts()
+```
+
+### Database Operations
+
+#### Multi-User Database Operations
+```python
+from core.base.storage import DatabaseManager
 
 db = DatabaseManager()
 
-# User profile management
-profile = db.get_user_profile()
-success = db.update_user_profile({"user_name": "John", "age": 25})
+# User management
+user_id = "12345678-1234-1234-1234-123456789012"
+profile = db.get_user_profile(user_id)
+success = db.update_user_profile(user_id, {"user_name": "John", "age": 25})
 
 # Session management
-session_id = db.create_session()
+session_id = db.create_session(user_id)
 db.save_message(session_id, "user", "Hello!")
 history = db.get_chat_history(session_id)
+
+# Activity and event management
+activity_id = db.create_activity(user_id, activity_data)
+event_id = db.create_event(user_id, event_data)
+```
+
+#### Recommendation & Alert Management
+```python
+# Create recommendations
+recommendations = [
+    {
+        "title": "Morning Exercise Reminder",
+        "content": "Based on your patterns, consider jogging at 7 AM",
+        "score": 8,
+        "recommendation_type": "activity"
+    }
+]
+rec_ids = create_recommendation(recommendations)
+
+# Create system alerts
+alert_data = {
+    "title": "Meeting Reminder",
+    "message": "Your meeting with John starts in 30 minutes",
+    "trigger_time": datetime.now() + timedelta(minutes=30),
+    "priority": "high"
+}
+alert_id = create_system_alert(alert_data)
+```
 
 # Event management
 event_id = db.create_event({
@@ -284,18 +618,49 @@ event_id = db.create_event({
 
 ### MCP Server Tools
 
-#### Web Search
+#### Web Search Integration
 ```python
+# Via MCP client
 await session.call_tool(
-    "search_web",
+    "search_web", 
     arguments={
         "query": "Python programming best practices",
-        "max_results": 3
+        "max_results": 5,
+        "search_depth": "advanced"
     }
 )
 ```
 
-#### History Summary
+#### User Information Management
+```python
+await session.call_tool(
+    "add_user_info",
+    arguments={
+        "user_input": "My name is Alice, I'm 28 years old and live in San Francisco"
+    }
+)
+```
+
+#### Event & Activity Management
+```python
+# Add events
+await session.call_tool(
+    "add_event",
+    arguments={
+        "user_input": "Meeting with team tomorrow at 3 PM in conference room B"
+    }
+)
+
+# Add activities
+await session.call_tool(
+    "add_activity", 
+    arguments={
+        "user_input": "I usually go for a run every morning at 6 AM"
+    }
+)
+```
+
+#### History Management
 ```python
 await session.call_tool(
     "get_history_summary",
@@ -307,22 +672,63 @@ await session.call_tool(
 
 ## 🧪 Testing
 
-### Test User Information Agent
+### Firebase & Notification Testing
+
 ```bash
-cd agents/extract_user_info_agent
-python extract_user_info.py
+# Test FCM service
+curl -X POST http://localhost:8001/api/fcm/register \
+  -H "Content-Type: application/json" \
+  -d '{"token":"test_token","user_id":"test_user"}'
+
+# Test notification delivery
+python test_mcp_tools.py
 ```
 
-### Test Event Extraction Agent
+### Agent Testing
+
 ```bash
-cd agents/extract_event_agent
-python extract_event.py
+# Test user information agent
+cd agent/extract_user_info
+python agent.py
+
+# Test event extraction agent  
+cd agent/extract_event
+python agent.py
+
+# Test activity analyzer
+python -c "
+from agent.recommendation.activity_analyzer import analyze_pending_activities
+result = analyze_pending_activities()
+print(result)
+"
+
+# Test recommendation engine
+python -c "
+from agent.recommendation.recommendation_engine import generate_recommendations
+result = generate_recommendations()
+print(f'Generated {len(result[\"recommendations\"])} recommendations')
+"
 ```
 
-### Test Database Operations
+### Background Service Testing
+
 ```bash
-# Test SQLAlchemy models
-python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print('✅ Database connected!')"
+# Test background alert service
+cd agent/bg_running
+python background_alert_service.py
+
+# Test alert processing
+python -c "
+from agent.bg_running.background_alert_service import force_check_alerts
+force_check_alerts()
+"
+```
+
+### Database Operations Testing
+
+```bash
+# Test database connection
+python -c "from core.base.storage import DatabaseManager; db = DatabaseManager(); print('✅ Database connected!')"
 
 # Test with Docker
 docker-compose exec chatbot-app python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print('✅ Database connected!')"
@@ -336,62 +742,145 @@ python server.py
 
 ## 🔍 Features Deep Dive
 
-### AI Personality Customization
-- **Personality Presets**: Friendly Assistant, Professional Advisor, Creative Companion, Study Buddy, Casual Friend
-- **Custom Personalities**: Write your own AI personality descriptions
-- **Communication Styles**: Conversational, Formal, Technical, Simple, Detailed, Brief
-- **Response Lengths**: Brief, Balanced, Detailed, Comprehensive
-- **Language Support**: English, Vietnamese, Mixed, Auto-detect
-- **Preset Management**: Save and load custom configurations
+### Firebase Cloud Messaging System
+- **Real-time Notifications**: Browser push notifications via Firebase Admin SDK
+- **Token Management**: Automatic FCM token collection and device tracking
+- **Multi-device Support**: Notifications across web browsers and devices
+- **Background Processing**: Continuous monitoring for due alerts and recommendations
+- **Smart Delivery**: Priority-based notification scheduling and delivery
+- **Notification History**: Complete tracking of sent notifications and user interactions
 
-### Intelligent Memory System
-- **Auto-Summarization**: Automatically summarizes every 5 messages
-- **Context Awareness**: Maintains conversation context across sessions
-- **User Profile Integration**: Remembers user information and preferences
-- **Smart Retrieval**: Contextual history retrieval for relevant responses
+### Advanced AI Agent Architecture
+- **LangGraph Workflow**: State-based agent processing with conditional flows
+- **Intent Detection**: Multi-language intent recognition for event management
+- **Structured Output**: Pydantic models for reliable data extraction
+- **Error Handling**: Robust error recovery and validation at each processing step
+- **Agent Orchestration**: Coordinated multi-agent processing for complex tasks
 
-### Event Management
-- **Natural Language Parsing**: "Meeting tomorrow at 2 PM" → structured event
-- **Smart Date Recognition**: Handles relative dates and times
-- **Priority Detection**: Infers event importance from language cues
-- **Location Extraction**: Physical and virtual meeting locations
-- **Validation**: Ensures event data consistency
+### Intelligent Activity Analysis
+- **Pattern Recognition**: Analyzes user activities to identify habits and preferences
+- **Time-based Analysis**: Preferred times, frequency patterns, and routine detection
+- **Recommendation Generation**: AI-powered suggestions based on activity patterns
+- **Habit Tracking**: Long-term behavior analysis and optimization suggestions
+- **Activity Grouping**: Smart categorization of similar activities and tasks
 
-### User Information Extraction
-- **Automatic Detection**: Extracts personal info from natural conversation
-- **Profile Building**: Incrementally builds user profile
-- **Data Validation**: Validates phone numbers, dates, and other fields
-- **Update Handling**: Manages profile corrections and updates
+### Real-time Alert & Monitoring System
+- **Background Service**: Continuous monitoring service running every 5 minutes
+- **Due Alert Processing**: Automatic detection and processing of upcoming events
+- **Smart Notifications**: Context-aware notification content and timing
+- **Alert Lifecycle**: Complete alert creation, processing, delivery, and cleanup
+- **Status Tracking**: Real-time monitoring of service health and performance
+
+### Multi-User Database Architecture
+- **UUID-based Users**: Scalable multi-user support with unique identifiers
+- **User Isolation**: Complete data separation between different users
+- **Vector Embeddings**: OpenAI embeddings for event similarity and search
+- **Relationship Management**: Proper foreign key relationships and data integrity
+- **Performance Optimization**: Comprehensive indexing for fast query performance
+
+### Event Management System
+- **Natural Language Processing**: "Meeting tomorrow at 2 PM" → structured event
+- **Smart Date Recognition**: Handles relative dates, times, and timezone conversion
+- **Priority Inference**: Automatic priority detection from context and keywords
+- **Location Extraction**: Physical addresses and virtual meeting platforms
+- **CRUD Operations**: Complete Create, Read, Update, Delete event management
+- **Conflict Detection**: Smart scheduling conflict detection and resolution
+
+### Memory & Context Management
+- **Auto-Summarization**: Intelligent conversation summarization every 5 messages
+- **Context Preservation**: Maintains conversation context across sessions and restarts
+- **Retrieval-Augmented**: Smart history retrieval for contextual responses
+- **Profile Integration**: User information integration into conversation context
+- **Session Management**: Persistent sessions with proper state management
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Firebase & Notification Issues
 
-**SQLAlchemy Import Errors**
+**FCM Service Not Starting**
 ```bash
-# Ensure all dependencies are installed
-pip install sqlalchemy>=2.0.0 psycopg2-binary>=2.9.0
+# Check Firebase credentials
+ls -la firebase_key.json
 
-# Check Python path
-python -c "import sqlalchemy; print(sqlalchemy.__version__)"
+# Verify environment variables
+echo $FIREBASE_CREDENTIALS_PATH
+
+# Test FCM service manually
+python start_fcm_service.py
+
+# Check FCM service logs
+docker-compose logs fcm-service
 ```
 
-**Database Connection Issues**
+**Notifications Not Received**
 ```bash
-# Test connection
-python -c "from database.storage import DatabaseManager; db = DatabaseManager(); print(db.test_connection())"
+# Check browser permissions
+# Ensure notifications are allowed in browser settings
 
-# Check database status
+# Verify FCM token registration
+curl http://localhost:8001/api/fcm/tokens
+
+# Test notification delivery
+python test_mcp_tools.py
+
+# Check Firebase project configuration
+cat notifier_site/public/index.html | grep "firebaseConfig"
+```
+
+### Database & Agent Issues
+
+**Database Connection Problems**
+```bash
+# Test database connection
+python -c "from core.base.storage import DatabaseManager; db = DatabaseManager(); print(db.test_connection())"
+
+# Check PostgreSQL container
 docker-compose exec postgres psql -U chatbot_user -d chatbot_db -c "SELECT 1;"
+
+# Verify database schema
+docker-compose exec postgres psql -U chatbot_user -d chatbot_db -c "\dt"
 ```
 
-**Agent Processing Errors**
+**Agent Processing Failures**
 ```bash
-# Test user info agent
-python agents/extract_user_info_agent/extract_user_info.py
+# Test individual agents
+python -c "
+from agent.extract_user_info.agent import create_user_info_extraction_agent
+agent = create_user_info_extraction_agent()
+result = agent.process('My name is John')
+print(result)
+"
 
-# Test event agent
-python agents/extract_event_agent/extract_event.py
+# Test event extraction
+python -c "
+from agent.extract_event.agent import EventExtractionAgent
+agent = EventExtractionAgent()
+result = agent.process('Meeting tomorrow at 2 PM')
+print(result)
+"
+
+# Check background service status
+python -c "
+from agent.bg_running.background_alert_service import get_service_status
+print(get_service_status())
+"
+```
+
+**MCP Server Issues**
+```bash
+# Test MCP server directly
+cd mcp
+python server.py
+
+# Verify MCP client connection
+python -c "
+from core.base.mcp_client import init_mcp_client
+client = init_mcp_client()
+print('MCP client initialized successfully')
+"
+
+# Check available tools
+python test_mcp_tools.py
 ```
 
 **MCP Server Issues**
@@ -461,67 +950,169 @@ docker-compose exec postgres psql -U chatbot_user -d chatbot_db -f /docker-entry
    docker-compose exec chatbot-app python -c "from database.storage import DatabaseManager; print('✅' if DatabaseManager().test_connection() else '❌')"
    ```
 
-## 🤝 Contributing
+## 🚦 Deployment
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Production Deployment Checklist
+
+#### Security Configuration
+```bash
+# Generate secure passwords
+DB_PASSWORD=$(openssl rand -base64 32)
+ADMIN_PASSWORD=$(openssl rand -base64 16)
+
+# Secure Firebase credentials
+chmod 600 firebase_key.json
+chown app:app firebase_key.json
+```
+
+#### Environment Setup
+```env
+# Production environment variables
+NODE_ENV=production
+DEBUG=false
+LOG_LEVEL=info
+
+# Secure database configuration
+DB_HOST=your_postgres_host
+DB_SSL_MODE=require
+DB_POOL_SIZE=20
+
+# Firebase production settings
+FIREBASE_PROJECT_ID=your_production_project
+FIREBASE_CREDENTIALS_PATH=/secure/path/firebase_key.json
+
+# Rate limiting and security
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+MAX_CONCURRENT_SESSIONS=100
+```
+
+#### Docker Production Deployment
+```bash
+# Production docker-compose
+docker-compose -f docker-compose.prod.yml up -d
+
+# Health checks
+docker-compose exec chatbot-app curl http://localhost:8501/health
+docker-compose exec fcm-service curl http://localhost:8001/health
+
+# Monitor logs
+docker-compose logs -f --tail=100
+```
+
+#### Monitoring & Maintenance
+```bash
+# Set up log rotation
+logrotate /var/log/memory_chatbot/*.log
+
+# Database maintenance
+docker-compose exec postgres psql -U chatbot_user -d chatbot_db -c "VACUUM ANALYZE;"
+
+# Monitor FCM service
+curl http://localhost:8001/api/fcm/tokens | jq '.total_count'
+
+# Check background service health
+python -c "
+from agent.bg_running.background_alert_service import get_service_status
+import json
+print(json.dumps(get_service_status(), indent=2))
+"
+```
+
+### Development Setup
+```bash
+# Fork and clone the repository
+git clone https://github.com/yourusername/memory_chatbot.git
+cd memory_chatbot
+
+# Create development environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Set up pre-commit hooks
+pip install pre-commit
+pre-commit install
+```
 
 ### Development Guidelines
 
-- **Code Style**: Follow PEP 8 for Python code
-- **Type Hints**: Add type hints for better code clarity
-- **Documentation**: Write comprehensive docstrings
-- **Testing**: Add tests for new features
-- **Modular Design**: Keep components separate and focused
-- **Error Handling**: Implement proper exception handling
-- **Logging**: Add appropriate logging for debugging
+#### Code Quality Standards
+- **Type Hints**: Use Python type hints for better code clarity
+- **Documentation**: Write comprehensive docstrings for all functions and classes
+- **Testing**: Add unit tests for new features using pytest
+- **Code Formatting**: Use black and isort for consistent code formatting
+- **Linting**: Ensure code passes flake8 and mypy checks
 
-### Project Structure Guidelines
+#### Agent Development
+```python
+# Example: Creating a new specialized agent
+from langgraph.graph import StateGraph, START, END
+from typing_extensions import TypedDict
 
-- **Agents**: Place specialized agents in `agents/` directory
-- **Tools**: Implement tools in `tools/` directory
-- **UI Components**: Keep UI logic in `ui/` directory
-- **Configuration**: Centralize config in `config/` directory
-- **Database**: All database operations in `database/` directory
-- **Utils**: Helper functions in `utils/` directory
+class MyAgentState(TypedDict):
+    input: str
+    output: str
+    error: Optional[str]
 
-## 📝 License
+class MySpecializedAgent:
+    def __init__(self, llm):
+        self.llm = llm
+        self.graph = self._create_graph()
+    
+    def _create_graph(self) -> StateGraph:
+        graph = StateGraph(MyAgentState)
+        graph.add_node("process", self._process_node)
+        graph.add_edge(START, "process")
+        graph.add_edge("process", END)
+        return graph.compile()
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+#### Firebase Integration
+```python
+# Example: Adding new FCM functionality
+from firebase_admin import messaging
+
+def send_custom_notification(tokens: List[str], title: str, body: str):
+    message = messaging.MulticastMessage(
+        notification=messaging.Notification(title=title, body=body),
+        tokens=tokens
+    )
+    return messaging.send_multicast(message)
+```
+
+### Testing Guidelines
+```bash
+# Run full test suite
+pytest tests/ -v
+
+# Test specific components
+pytest tests/test_agents.py::TestUserInfoAgent
+pytest tests/test_fcm_service.py::TestTokenManagement
+
+# Integration tests
+pytest tests/integration/ -v --slow
+```
 
 ## 🙏 Acknowledgments
 
-- [LangGraph](https://langchain-ai.github.io/langgraph/) for workflow orchestration
-- [SQLAlchemy](https://sqlalchemy.org/) for robust ORM capabilities
-- [Streamlit](https://streamlit.io/) for the interactive web interface
-- [PostgreSQL](https://www.postgresql.org/) for reliable database management
-- [Tavily](https://tavily.com/) for web search API capabilities
-- [OpenAI](https://openai.com/) for GPT-4o-mini language model
-- [Model Context Protocol](https://github.com/modelcontextprotocol/servers) for tool integration
+### Core Technologies
+- **[LangGraph](https://langchain-ai.github.io/langgraph/)** - State-based workflow orchestration and agent management
+- **[Firebase](https://firebase.google.com/)** - Real-time notifications and cloud messaging infrastructure
+- **[PostgreSQL](https://www.postgresql.org/)** with **[pgvector](https://github.com/pgvector/pgvector)** - Vector database for embeddings and multi-user data
+- **[FastAPI](https://fastapi.tiangolo.com/)** - High-performance API framework for FCM services
+- **[Streamlit](https://streamlit.io/)** - Interactive web interface and user experience
 
-## 📞 Support
+### AI & Search Services  
+- **[OpenAI](https://openai.com/)** - GPT-4o-mini language model for intelligent conversations
+- **[Tavily](https://tavily.com/)** - Real-time web search API integration
+- **[Model Context Protocol](https://github.com/modelcontextprotocol/servers)** - Extensible tool integration framework
 
-For support and questions:
+### Development Tools
+- **[Docker](https://docker.com/)** - Containerization and deployment orchestration
+- **[SQLAlchemy](https://sqlalchemy.org/)** - Robust ORM and database relationship management
+- **[Pydantic](https://pydantic.dev/)** - Data validation and structured output parsing
 
-1. **Check Documentation**: Review this README and inline documentation
-2. **GitHub Issues**: [Create an issue](https://github.com/pofmN/memory_chatbot/issues) with detailed information
-3. **Discussions**: Use GitHub Discussions for general questions
-
-### When Reporting Issues
-
-Include the following information:
-- **Environment**: OS, Python version, Docker version
-- **Error Logs**: Complete error messages and stack traces
-- **Steps to Reproduce**: Detailed steps to reproduce the issue
-- **Configuration**: Relevant environment variables (without API keys)
-- **Expected vs Actual**: What you expected vs what happened
-
----
-
-**Built with ❤️ using Python, SQLAlchemy, LangGraph, and Streamlit**
+**Built with ❤️ Python, SQLAlchemy, LangGraph, and Streamlit**
 
 [![GitHub](https://img.shields.io/badge/GitHub-pofmN/memory_chatbot-blue?logo=github)](https://github.com/pofmN/memory_chatbot)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)](https://python.org)

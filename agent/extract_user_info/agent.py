@@ -41,7 +41,6 @@ class UserInfoExtractionAgent:
             load_dotenv()
             openai_api = os.environ.get("OPENAI_API_KEY")
             
-            # Initialize LLM
             self.llm = ChatOpenAI(
                 model_name="gpt-4o-mini",
                 temperature=0.1,
@@ -52,9 +51,7 @@ class UserInfoExtractionAgent:
         else:
             self.llm = llm
             
-        # Initialize database
         
-        # Create the agent graph
         self.graph = self._create_graph()
     
     def _create_graph(self) -> StateGraph:

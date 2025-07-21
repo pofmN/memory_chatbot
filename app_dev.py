@@ -114,7 +114,6 @@ def handle_fcm_token():
                         
                         print(f"✅ FCM token saved successfully: {fcm_token[:10]}...")
                         
-                        # Clear query params
                         st.query_params.clear()
                     else:
                         st.error(f"❌ Failed to save FCM token: {result.get('message', 'Unknown error')}")
@@ -134,67 +133,20 @@ def handle_fcm_token():
         
         st.query_params.clear()
 
-def check_fcm_registration():
-    """Check if FCM token is registered in localStorage"""
-    
-    # First check if we have FCM token in session state
-    if 'fcm_token_saved' in st.session_state and st.session_state.fcm_token_saved:
-        return True
-    
-    # Check localStorage with better error handling
-    check_storage_js = """
-    <script>
-        function checkFCMRegistration() {
-            try {
-                const registrationFlag = 'fcm_token_registered';
-                const isRegistered = localStorage.getItem(registrationFlag);
-                
-                if (!isRegistered) {
-                    console.log('FCM token not found in localStorage');
-                    // Set a flag for Streamlit to detect
-                    window.parent.postMessage({
-                        type: 'FCM_NOT_REGISTERED'
-                    }, '*');
-                } else {
-                    console.log('FCM token found in localStorage');
-                    window.parent.postMessage({
-                        type: 'FCM_REGISTERED'
-                    }, '*');
-                }
-            } catch (error) {
-                console.error('Error checking localStorage:', error);
-                // Assume not registered on error
-                window.parent.postMessage({
-                    type: 'FCM_NOT_REGISTERED'
-                }, '*');
-            }
-        }
-        
-        // Wait for page to load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', checkFCMRegistration);
-        } else {
-            checkFCMRegistration();
-        }
-    </script>
-    """
-    
-    listener_js = """
-    <script>
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'FCM_NOT_REGISTERED') {
-                // Redirect to Firebase app
-                window.location.href = 'https://personal-chatapp-d057a.web.app';
-            } else if (event.data.type === 'FCM_REGISTERED') {
-                // Continue with normal app flow
-                console.log('FCM already registered, continuing...');
-            }
-        });
-    </script>
-    """
-    
-    # Execute both scripts
-    st.components.v1.html(check_storage_js + listener_js, height=0)
+def check_fcm_token_and_redirect():
+
+    st.write(f"FCM Token Status: {st.session_state.fcm_token_saved}")
+
+    if st.session_state.fcm_token_saved != True:
+        st.session_state.fcm_token_saved = True
+        st.markdown("""
+        <meta http-equiv="refresh" content="1; url=https://personal-chatapp-d057a.web.app">
+        """, unsafe_allow_html=True)
+        st.write("🔔 Redirecting to notification setup page...")
+    else:
+        st.write("FCM token already exists. Proceeding with the app...")
+        st.write("Welcome to the main app!")
+
 
 def main():
     """Main application function"""
@@ -202,11 +154,12 @@ def main():
     db, llm = init_components()
     initialize_session_state()
     
-    check_fcm_registration()
-
-    # Handle FCM token from URL first
     handle_fcm_token()
-    
+
+    if 'fcm_token_saved' not in st.session_state or 'fcm_token' not in st.session_state:
+        st.session_state.fcm_token_saved = False
+        st.session_state.fcm_token = None
+        check_fcm_token_and_redirect()
         
     # Show loading message while checking
     if 'fcm_token_saved' not in st.session_state:
@@ -283,9 +236,6 @@ def main():
 
     render_footer()
     render_database_status(db)
-    
-    # Load Firebase messaging components for FCM support
-    #st.button("Test Alert", on_click=test_alert("asdfqweqweqweqweq","qweqweqweq"), type="primary")
 
 if __name__ == "__main__":
     main()

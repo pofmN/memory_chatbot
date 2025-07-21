@@ -6,18 +6,16 @@ import time
 import logging
 import requests
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict
 import asyncio
 import firebase_admin
 from firebase_admin import messaging, credentials
-from desktop_notifier import DesktopNotifier
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from agent.recommendation.services import (
-    get_upcoming_events, get_due_alerts, get_pending_alerts,
-    update_alert_status, create_system_alert, alert_exists
+    get_due_alerts, update_alert_status
 )
 from agent.recommendation.activity_analyzer import activity_analyzer
 from agent.recommendation.recommendation_engine import generate_recommendations
@@ -67,26 +65,35 @@ class BackgroundAlertService:
         """Main service loop"""
         while self.running:
             try:
+                self._generate_activity_analysis()
+                print("🔍 Analyzing user activities...")
+                time.sleep(5)
+
                 self._generate_periodic_recommendations()
                 print("🔄 Checking for due alerts...")
+                time.sleep(5)
 
                 self._process_due_alerts()
                 print("Cleaning up old alerts...")
+                time.sleep(5)
 
                 self._cleanup_old_alerts()
                 print("Finished processing alerts and recommendations")
+                time.sleep(5)
                 
             except Exception as e:
                 logger.error(f"❌ Error in background service: {e}")
             
             time.sleep(self.check_interval)
-    
 
     def _generate_activity_analysis(self):
         """Generate activity analysis for upcoming events"""
         try:
-            logger.infor("🔍 Generating activity analysis for user activities...")
-            activity_analyzer.analyze_activities
+            time_since_last = datetime.now() - self.last_recommendation_generation
+            print(f"Last recommendation generation: {self.last_recommendation_generation}, time since last recommendation: {time_since_last}")            
+            if time_since_last.total_seconds() >= 3600:
+                logger.info("🔍 Generating activity analysis for user activities...")
+                activity_analyzer.analyze_activities()
         except Exception as e:
             logger.error(f"❌ Error generating activity analysis: {e}")
 
@@ -108,7 +115,7 @@ class BackgroundAlertService:
                     if user_token:
                         alert['fcm_token'] = user_token['token']
                         asyncio.run(self._create_browser_notification(alert))
-                        time.sleep(2)
+                        time.sleep(60)
                     else:
                         logger.warning(f"⚠️ No FCM token found for user {alert['user_id']}")
             else:
@@ -169,7 +176,6 @@ class BackgroundAlertService:
             response = messaging.send(message)
             logger.info(f"✅ Notification sent successfully: {response}")
             
-            # Update alert status
             update_alert_status(alert['alert_id'], 'sent')
             
         except Exception as e:

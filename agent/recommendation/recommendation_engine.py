@@ -12,8 +12,19 @@ from core.base.schema import Recommendation
 from datetime import datetime, timedelta
 import json
 import dotenv
-
 dotenv.load_dotenv()
+import pytz
+
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_alerts.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class RecommendationEngine:
     def __init__(self):
@@ -43,7 +54,9 @@ Based on this data, generate 3-5 personalized recommendations. Each recommendati
 - score: Relevance score (1-10, where 10 is most important)
 - reason: Why this recommendation is suggested
 - status: Always set to "pending"
-- shown_at: When this recommendation should be shown (ISO format, e.g., "2024-01-15T10:30:00")
+- shown_at: This recommendation should be shown in next hour from current time not later, in TIMESTAMP format (e.g., '2025-06-30 15:00:00'), 
+inferred from the input or defaulting to the current date time if only time is provided.
+
 
 Focus on actionable, personalized suggestions that help optimize the user's schedule and habits.
 Consider user's events to create recommendations event that event is not happening in next hour if that event is importance.
@@ -66,7 +79,8 @@ Pay attention to the timing of activities and events to ensure recommendations t
             
             activity_data = self._format_activity_analysis(activity_analyses)
             event_data = self._format_upcoming_events(upcoming_events)
-            current_datetime = datetime.now().isoformat()
+            bangkok_tz = pytz.timezone('Asia/Bangkok')
+            current_datetime = datetime.now(bangkok_tz).isoformat()
 
             prompt = self.recommendation_prompt.format(
                 RECOMMENDATION_PROMPT=RECOMMENDATION_PROMPT,
@@ -102,10 +116,10 @@ Pay attention to the timing of activities and events to ensure recommendations t
                         rec['score'] = min(max(int(rec.get('score', 5)), 1), 10)
                         rec['reason'] = rec.get('reason', '')
                         rec['status'] = 'pending'
-                        shown_at = self._parse_datetime(rec.get('shown_at'))
-                        rec['shown_at'] = shown_at.isoformat() if shown_at else datetime.now().isoformat()
-                    rec_count = create_recommendation(recommendations)
-                    print(f"✅ Saved {rec_count} recommendations to database")
+                        rec['shown_at'] = rec.get('shown_at')
+                        logger.info(f"Saving recommendation: {rec['title']} at {rec['shown_at']} hẹ hẹ")
+                    rec_ids = create_recommendation(recommendations)
+                    print(f"✅ Saved {len(rec_ids)} recommendations to database")
     
                 print(f"✅ Generated {len(recommendations)} recommendations using structured output")
                 
@@ -115,6 +129,9 @@ Pay attention to the timing of activities and events to ensure recommendations t
             
             try:
                 created_alerts = self._create_alerts_from_recommendations(recommendations)
+                if created_alerts:
+                    for rec_id in rec_ids:
+                        update_recommendation_status(rec_id, 'alert_created')
                 
             except Exception as alert_error:
                 print(f"⚠️ Error creating alerts from recommendations: {alert_error}")
@@ -184,6 +201,7 @@ Pay attention to the timing of activities and events to ensure recommendations t
             valid_recommendations = []
             for rec in recommendations:
                 if isinstance(rec, dict) and rec.get('title') and rec.get('content'):
+                    shown_at = self._parse_datetime(rec.get('shown_at', ''))
                     cleaned_rec = {
                         "recommendation_type": rec.get('recommendation_type', 'general'),
                         "title": rec.get('title'),
@@ -191,7 +209,7 @@ Pay attention to the timing of activities and events to ensure recommendations t
                         "score": min(max(int(rec.get('score', 5)), 1), 10),
                         "reason": rec.get('reason', ''),
                         "status": "pending",
-                        "shown_at": rec.get('shown_at', datetime.now().isoformat())
+                        "shown_at": shown_at
                     }
                     valid_recommendations.append(cleaned_rec)
             
@@ -237,16 +255,6 @@ Pay attention to the timing of activities and events to ensure recommendations t
             })
         
         return json.dumps(formatted_data, indent=2)
-
-    def _parse_datetime(self, datetime_str: str):
-        """Parse datetime string"""
-        if not datetime_str:
-            return None
-        try:
-            return datetime.fromisoformat(datetime_str.replace('Z', '+07:00'))
-        except Exception as e:
-            print(f"⚠️ Could not parse datetime: {datetime_str}")
-            return None
 
     def _create_alerts_from_recommendations(self, recommendations: list) -> int:
         """Create system alerts from high-score recommendations"""
@@ -297,7 +305,6 @@ Pay attention to the timing of activities and events to ensure recommendations t
     def generate_activity_specific_recommendations(self, activity_type: str) -> dict:
         """Generate recommendations for a specific activity type"""
         try:
-            # Get analysis for specific activity
             from agent.recommendation.services import get_activity_analysis
             analysis = get_activity_analysis(activity_type)
             
@@ -307,10 +314,8 @@ Pay attention to the timing of activities and events to ensure recommendations t
                     "message": f"No analysis found for activity: {activity_type}"
                 }
             
-            # Get related events
             upcoming_events = get_upcoming_events(days=7)
             
-            # Create focused prompt
             focused_prompt = f"""
             Generate 2-3 specific recommendations for the activity type: "{activity_type}"
             
@@ -329,7 +334,6 @@ Pay attention to the timing of activities and events to ensure recommendations t
             Each recommendation should be specific to this activity type and include actionable advice.
             """
             
-            # Use structured output
             try:
                 structured_llm = self.llm.with_structured_output(
                     Recommendation,
@@ -337,7 +341,7 @@ Pay attention to the timing of activities and events to ensure recommendations t
                 )
                 
                 recommendations = []
-                for i in range(3):  # Generate up to 3 specific recommendations
+                for i in range(3):
                     try:
                         response = structured_llm.invoke(f"{focused_prompt}\n\nGenerate specific recommendation #{i+1}:")
                         
