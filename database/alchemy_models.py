@@ -116,7 +116,6 @@ class Event(Base):
     priority = Column(String(20))
     description = Column(Text)
     embedding = Column(Vector(1536))  # For OpenAI embeddings
-    source = Column(String(50), default='manual')
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp())
     

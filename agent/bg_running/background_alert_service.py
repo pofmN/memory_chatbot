@@ -204,27 +204,26 @@ class BackgroundAlertService:
     
     def _cleanup_old_alerts(self):
         """Clean up old alerts"""
-        conn = None
-        try:
-            conn = db.get_connection()
-            if conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        DELETE FROM alert 
-                        WHERE status = 'sent' 
-                        AND created_at < NOW() - INTERVAL '30 days'
-                    """)
-                    deleted_alerts = cur.rowcount
-
-                conn.commit()
-                if deleted_alerts > 0:
-                    logger.info(f"🗑️ Cleanup: {deleted_alerts} old alerts deleted")
-                        
-        except Exception as e:
-            logger.error(f"❌ Error in cleanup: {e}")
-        finally:
-            if conn:
-                conn.close()
+        with db.get_session() as session:
+            try:
+                from database.alchemy_models import Alert
+                from datetime import datetime, timedelta
+                
+                cutoff_date = datetime.now() - timedelta(days=30)
+                
+                deleted_count = session.query(Alert).filter(
+                    Alert.status == 'sent',
+                    Alert.created_at < cutoff_date
+                ).delete(synchronize_session=False)
+                
+                session.commit()
+                
+                if deleted_count > 0:
+                    logger.info(f"🗑️ Cleanup: {deleted_count} old alerts deleted")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error in cleanup: {e}")
+                session.rollback()
 
     def get_service_status(self) -> Dict:
         """Get service status information"""

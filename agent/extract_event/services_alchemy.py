@@ -35,9 +35,8 @@ def create_event(event_data: dict, user_id: str = "12345678-1234-1234-1234-12345
                 location=event_data.get('location'),
                 priority=event_data.get('priority', 'normal'),
                 description=event_data.get('description', ''),
-                embedding=embedding_json,
-                source=event_data.get('source', 'manual')
-            )
+                embedding=embedding_json            
+                )
             
             session.add(event)
             session.commit()
@@ -195,7 +194,6 @@ def get_all_events(user_id: str = "12345678-1234-1234-1234-123456789012", limit:
                 'location': e.location,
                 'priority': e.priority,
                 'description': e.description,
-                'source': e.source,
                 'created_at': e.created_at,
                 'updated_at': e.updated_at
             } for e in events]
@@ -228,7 +226,6 @@ def get_upcoming_events(user_id: str = "12345678-1234-1234-1234-123456789012", d
                 'location': e.location,
                 'priority': e.priority,
                 'description': e.description,
-                'source': e.source,
                 'created_at': e.created_at,
                 'updated_at': e.updated_at
             } for e in events]
@@ -258,7 +255,6 @@ def get_event_by_id(event_id: int, user_id: str = "12345678-1234-1234-1234-12345
                 'location': event.location,
                 'priority': event.priority,
                 'description': event.description,
-                'source': event.source,
                 'created_at': event.created_at,
                 'updated_at': event.updated_at
             }
@@ -313,7 +309,6 @@ def get_events_by_priority(priority: str, user_id: str = "12345678-1234-1234-123
                 'location': e.location,
                 'priority': e.priority,
                 'description': e.description,
-                'source': e.source,
                 'created_at': e.created_at,
                 'updated_at': e.updated_at
             } for e in events]
