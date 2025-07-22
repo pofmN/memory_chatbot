@@ -1,6 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
-from core.base.storage import DatabaseManager
+from core.base.alchemy_storage import DatabaseManager
 
 
 db = DatabaseManager()

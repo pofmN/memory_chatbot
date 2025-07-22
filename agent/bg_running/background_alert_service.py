@@ -19,7 +19,7 @@ from agent.recommendation.services import (
 )
 from agent.recommendation.activity_analyzer import activity_analyzer
 from agent.recommendation.recommendation_engine import generate_recommendations
-from core.base.storage import DatabaseManager
+from core.base.alchemy_storage import DatabaseManager
 
 # Configure logging
 logging.basicConfig(

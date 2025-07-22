@@ -4,11 +4,11 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
-from agent.recommendation.services import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis, get_pending_activities, mark_activities_analyzed
+from agent.recommendation.services_alchemy import get_all_activities, create_activity_analysis, get_activity_analysis, update_activity_analysis, get_pending_activities, mark_activities_analyzed
 from collections import defaultdict, Counter
 from agent.recommendation.prompt import ACTIVITY_ANALYSIS_PROMPT
 from core.base.schema import ActivityAnalysis
-from core.base.storage import DatabaseManager
+from core.base.alchemy_storage import DatabaseManager
 import json
 import dotenv
 

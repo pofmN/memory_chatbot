@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
+from typing import List, Dict, Optional
+import psycopg2
+# Assume db and DEFAULT_USER_ID are defined elsewhere
 
 db = DatabaseManager()
 
@@ -280,7 +283,6 @@ def get_all_activity_analysis() -> List[Dict]:
             conn.close()
     return []
 
-
 def delete_activity_analysis(analysis_id: int) -> bool:
     """Delete activity analysis record"""
     conn = db.get_connection()
@@ -323,10 +325,6 @@ def get_upcoming_events(days: int = 7, user_id: str = DEFAULT_USER_ID) -> List[D
         finally:
             conn.close()
     return []
-
-from typing import List, Dict, Optional
-import psycopg2
-# Assume db and DEFAULT_USER_ID are defined elsewhere
 
 def create_recommendation(recommendation_data: List[Dict], user_id: str = DEFAULT_USER_ID) -> Optional[List[int]]:
     """

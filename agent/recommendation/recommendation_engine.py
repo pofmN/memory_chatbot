@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from langchain_openai import ChatOpenAI
-from agent.recommendation.services import (
+from agent.recommendation.services_alchemy import (
     get_all_activity_analysis, get_upcoming_events, 
     create_system_alert, alert_exists, create_recommendation, update_recommendation_status
 )

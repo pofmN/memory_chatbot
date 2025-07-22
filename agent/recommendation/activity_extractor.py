@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from langchain_openai import ChatOpenAI
 from core.base.schema import ActivitiesInformation
-from agent.recommendation.services import create_activity, get_all_activities
+from agent.recommendation.services_alchemy import create_activity, get_all_activities
 from agent.recommendation.prompt import EXTRACT_ACTIVITIES_PROMPT
 from datetime import datetime
 import dotenv

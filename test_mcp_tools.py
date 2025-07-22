@@ -10,7 +10,7 @@ import firebase_admin
 import typing
 from typing import Dict
 from firebase_admin import credentials, messaging
-from core.base.storage import DatabaseManager
+from core.base.alchemy_storage import DatabaseManager
 from langchain_openai import ChatOpenAI
 from agent.recommendation.services import update_alert_status
 import uuid

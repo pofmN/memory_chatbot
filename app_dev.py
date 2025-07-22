@@ -6,7 +6,7 @@ import logging
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 import time
-from core.base.storage import DatabaseManager
+from core.base.alchemy_storage import DatabaseManager
 
 from ui.ui_components import (
     initialize_session_state, 
